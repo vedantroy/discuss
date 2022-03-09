@@ -1,6 +1,6 @@
 import { expect, it } from "@jest/globals";
 import _ from "lodash";
-import PageManager from "../components/PDFViewer/controller/PageManager";
+import PageManager from "~/components/PDFViewer/controller/PageManager";
 
 const BASE_PAGE_HEIGHT = 10;
 const V_GAP = 1;

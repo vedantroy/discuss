@@ -4,13 +4,13 @@ import { RenderParameters, RenderTask } from "pdfjs-dist/types/src/display/api";
 import { useEffect, useRef, useState } from "react";
 import invariant from "tiny-invariant";
 
-const RenderState = {
+export const RenderState = {
     RENDER: "render",
     CANCEL: "cancel",
     DESTROY: "destroy",
     NONE: "none",
 } as const;
-type RenderState = typeof RenderState[keyof typeof RenderState];
+export type RenderState = typeof RenderState[keyof typeof RenderState];
 
 type PageProps = {
     state: RenderState;
@@ -26,7 +26,7 @@ export default function Page({ state, width, height, page }: PageProps) {
 
     function cleanupCanvas() {
         const { current: canvas } = canvasRef;
-        invariant(canvas);
+        invariant(canvas, `canvas`);
         // PDF.js viewer states zeroing width/height
         // causes Firefox to release graphics resources immediately
         // reducing memory consumption
@@ -36,14 +36,20 @@ export default function Page({ state, width, height, page }: PageProps) {
     }
 
     useEffect(() => {
+        if (state !== RenderState.NONE) {
+            console.log(state)
+            invariant(page, `page`);
+        }
+
         if (state === RenderState.RENDER) {
+            console.log("RENDERING CANVAS: " + page)
             setRenderCanvas(true);
         } else if (state === RenderState.DESTROY) {
-            invariant(!renderTaskRef.current);
+            invariant(!renderTaskRef.current, `!rtask`);
             cleanupCanvas();
         } else if (state === RenderState.CANCEL) {
             const { current: renderTask } = renderTaskRef;
-            invariant(renderTask);
+            invariant(renderTask, `rtask`);
             renderTask.cancel();
         }
     }, [state]);
@@ -53,7 +59,7 @@ export default function Page({ state, width, height, page }: PageProps) {
             // The canvas was created *and* we want to render
             const { current: canvas } = canvasRef;
             const ctx = canvas.getContext("2d");
-            invariant(ctx);
+            invariant(ctx, `ctx`);
             const renderArgs: RenderParameters = {
                 canvasContext: ctx,
                 // @ts-ignore
