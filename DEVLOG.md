@@ -1,3 +1,18 @@
+# 09-03-2022
+- EDD:
+  - 1st idx in array go: none -> render -> none
+
+# 08-03-2022
+
+- Starting first push on PDFViewer (writing out all components, etc.)
+  - going to try expect-driven-development:
+    - write what I expect to happen
+    - diff the expectations
+  - this should promote greater understanding of my own code...
+  - expect:
+    - setting render called _after_ `console.timeEnd("load")`
+    - all pages should exist in `pages`
+
 # 27-02-2022
 
 - I finally realized that tests are pull-based but application code can be either pull or push based (simpler as push based)

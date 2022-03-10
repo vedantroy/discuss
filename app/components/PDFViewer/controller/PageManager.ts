@@ -1,5 +1,5 @@
 import { AsyncIteratorManager } from "./AsyncIteratorManager";
-import { assert } from "./utils";
+import invariant from "tiny-invariant"
 
 const ALWAYS_RENDER = 3;
 const PRIORITY_GAP = 2;
@@ -143,7 +143,7 @@ export default class PageManager {
     }
 
     #doOnPageRender(page: number) {
-        assert(this.#currentRender === null, `current render was: ${this.#currentRender}`);
+        invariant(this.#currentRender === null, `current render was: ${this.#currentRender}`);
         this.#currentRender = page;
         this.#ensureRenderSpace();
         this.#onPageRenderIteratorManager.pushValue(page);
@@ -178,7 +178,7 @@ export default class PageManager {
         onY,
         pageBufferSize,
     }: PageManagerOpts) {
-        assert(
+        invariant(
             pageBufferSize % 2 === 1 && pageBufferSize > 0,
             `page buffer size must be positive & odd, got ${pageBufferSize}`,
         );
@@ -217,10 +217,13 @@ export default class PageManager {
         this.#renderQueueIdx = 0;
     }
 
-    public renderFinished = () => {
-        assert(typeof this.#currentRender === "number", `invalid current render: ${this.#currentRender}`);
-        assert(!this.#rendered.has(this.#currentRender!!), `render set already had: ${this.#currentRender}`);
-        this.#rendered.add(this.#currentRender!!);
+    public renderFinished = (n?: number) => {
+        invariant(typeof this.#currentRender === "number", `invalid current render: ${this.#currentRender}`);
+        invariant(!this.#rendered.has(this.#currentRender!!), `render set already had: ${this.#currentRender}`);
+        if (typeof n === 'number') {
+            invariant(this.#currentRender === n, `expected outstanding render to be ${this.#currentRender} instead of ${n}`)
+        }
+        this.#rendered.add(this.#currentRender);
         this.#currentRender = null;
         this.#continueRender();
     };
@@ -310,7 +313,7 @@ export default class PageManager {
 
     public setY(y: number) {
         const height = this.height;
-        assert(0 <= y && y <= this.height, `${y} > ${height}`);
+        invariant(0 <= y && y <= this.height, `${y} > ${height}`);
 
         const pageWithVGap = this.#pageHeight + this.#vGap;
         const pagesOutOfScreen = Math.floor(y / pageWithVGap);
@@ -323,13 +326,13 @@ export default class PageManager {
         this.#flush();
     }
 
-    #assertValidPage(page: number) {
-        assert(1 <= page && page <= this.#pages, `Invalid page: ${page}`);
+    #invariantValidPage(page: number) {
+        invariant(1 <= page && page <= this.#pages, `Invalid page: ${page}`);
     }
 
     /** @param page starts from 1 */
     goToPage(page: number) {
-        this.#assertValidPage(page);
+        this.#invariantValidPage(page);
 
         // Example: If scroll to page 2 then we have scrolled by (2 - 1) pages and 2 vGaps
         const startOfPageTop = this.#pageHeight * (page - 1) + this.#vGap * page;

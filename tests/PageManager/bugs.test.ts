@@ -3,8 +3,8 @@ import { createPageManagerWithDefaults } from "./utils";
 it("allows callbacks to be assigned to other objects", () => {
     const pm = createPageManagerWithDefaults();
     pm.goToPage(1);
-    const q = {
+    const obj = {
         renderFinished: pm.renderFinished,
     };
-    expect(q.renderFinished).not.toThrow();
+    expect(obj.renderFinished).not.toThrow();
 });
