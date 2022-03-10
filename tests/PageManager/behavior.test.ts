@@ -1,41 +1,7 @@
 import { expect, it } from "@jest/globals";
 import _ from "lodash";
 import PageManager from "~/components/PDFViewer/controller/PageManager";
-
-const BASE_PAGE_HEIGHT = 10;
-const V_GAP = 1;
-const H_GAP = 2;
-const PAGES = 10;
-
-function createPageManagerWithDefaults({
-    pages = PAGES,
-    basePageWidth = 10,
-    basePageHeight = BASE_PAGE_HEIGHT,
-    hGap = H_GAP,
-    vGap = V_GAP,
-    onX = () => {},
-    onY = () => {},
-    onPageNumber = () => {},
-    onPageRender = () => {},
-    onPageDestroy = () => {},
-    onPageCancel = () => {},
-    pageBufferSize = 11,
-} = {}) {
-    return new PageManager({
-        pages,
-        basePageWidth,
-        basePageHeight,
-        hGap,
-        vGap,
-        onX,
-        onY,
-        onPageNumber,
-        onPageRender,
-        onPageDestroy,
-        pageBufferSize,
-        onPageCancel,
-    });
-}
+import { BASE_PAGE_HEIGHT, createPageManagerWithDefaults, H_GAP, PAGES, V_GAP } from "./utils";
 
 type ListenerName =
     | "onPageNumber"
@@ -84,7 +50,7 @@ function createAwaiter(
     } else return p;
 }
 
-it("Scrolling updates current page number", async () => {
+it("updates the current page number when scrolling", async () => {
     const pm = createPageManagerWithDefaults();
 
     async function getPageNumber(y: number) {
@@ -123,12 +89,12 @@ it("Scrolling updates current page number", async () => {
 });
 
 // TODO: Is this test useless?
-it("Height is computed", () => {
+it("computes height", () => {
     const pm = createPageManagerWithDefaults();
     expect(pm.height).toStrictEqual(BASE_PAGE_HEIGHT * PAGES + V_GAP * PAGES + 1);
 });
 
-it("Go to page updates x/y & current page", async () => {
+it("updates x/y & current page when going to a specific page", async () => {
     const pm = createPageManagerWithDefaults();
 
     async function getXY(page: number, excludeX: boolean = false) {
@@ -152,7 +118,7 @@ it("Go to page updates x/y & current page", async () => {
     expect(r?.onY).toStrictEqual(V_GAP + BASE_PAGE_HEIGHT + V_GAP);
 });
 
-it("Render queues are valid", () => {
+it("creates valid render queues", () => {
     let pm = createPageManagerWithDefaults({ pages: 3, pageBufferSize: 1 });
     expect(pm.renderQueues).toStrictEqual([[1], [2], [3]]);
 
@@ -163,7 +129,7 @@ it("Render queues are valid", () => {
     expect(pm.renderQueues).toStrictEqual([[1, 2, 3], [2, 1, 3], [3, 2, 1]]);
 });
 
-it("Go to page updates render", async () => {
+it("updates renders when going to a page", async () => {
     const pm = createPageManagerWithDefaults();
     async function getNextRender(f: () => void, timeoutMs: number | undefined = undefined) {
         const p = createAwaiter(pm, ["onPageRender"], { timeoutMs });
@@ -270,7 +236,7 @@ async function assertNoChanges(pm: PageManager, f: Function) {
     }
 }
 
-it("rendering - sliding window", async () => {
+it("uses a sliding window of renders when going to sequential pages", async () => {
     const pm = createPageManagerWithDefaults({ pageBufferSize: 5 });
 
     const cPull = _.curry(pull)(pm);
@@ -296,7 +262,7 @@ it("rendering - sliding window", async () => {
     await cPull(() => pm.goToPage(6), { render: [4], destroy: [9] });
 });
 
-it("rendering - partial / cancel", async () => {
+it("cancels unneeded renders", async () => {
     const pm = createPageManagerWithDefaults({ pageBufferSize: 5 });
     const renderIt = pm.createOnPageRenderIterator();
     const destroyIt = pm.createOnPageDestroyIterator();

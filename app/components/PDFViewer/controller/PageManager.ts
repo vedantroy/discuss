@@ -217,13 +217,13 @@ export default class PageManager {
         this.#renderQueueIdx = 0;
     }
 
-    public renderFinished() {
+    public renderFinished = () => {
         assert(typeof this.#currentRender === "number", `invalid current render: ${this.#currentRender}`);
         assert(!this.#rendered.has(this.#currentRender!!), `render set already had: ${this.#currentRender}`);
         this.#rendered.add(this.#currentRender!!);
         this.#currentRender = null;
         this.#continueRender();
-    }
+    };
 
     // Eviction is O(N)
     // This seems fine (not worth questionably micro-optimizing with a heap)
