@@ -1,4 +1,4 @@
-import { assert } from "./utils";
+import invariant from "tiny-invariant";
 
 type Resolve = (x: IteratorResult<number, any>) => void;
 type IteratorState = { queue: number[]; resolve: Resolve | null; remaining: number | null; id: number };
@@ -30,7 +30,7 @@ export class AsyncIteratorManager {
         const it: AsyncIterator<number> = {
             next() {
                 return new Promise((resolve, _) => {
-                    assert(state.resolve === null, `resolve was already taken`);
+                    invariant(state.resolve === null, `resolve was already taken`);
                     state.resolve = resolve;
                     if (state.remaining === 0) {
                         delete that.states[state.id];

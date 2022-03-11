@@ -1,24 +1,10 @@
 // TODO: Remove the invariants & just use if-stmts instead
-import * as pdfjs from "pdfjs-dist";
 import type { PDFPageProxy } from "pdfjs-dist";
 import { RenderParameters, RenderTask } from "pdfjs-dist/types/src/display/api";
 import { PageViewport } from "pdfjs-dist/types/web/interfaces";
 import { useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import invariant from "tiny-invariant";
-
-// State machine:
-// NO_CANVAS
-//   render_request: start render
-//   cancel_request: exception
-//   destroy_request: exception
-// RENDER_STARTED
-//   render_request: exception
-//   cancel_request: (run cancel) then start/finish destroy
-//   destroy_request: exception
-// RENDER_FINISHED
-//   cancel_request:  exception
-//   destroy_request: start/finish destroy
-//   render_request:  exception
 
 const InternalState = {
     CANVAS_NONE: "canvas_none",
@@ -39,17 +25,21 @@ export type RenderState = typeof RenderState[keyof typeof RenderState];
 type PageProps = {
     state: RenderState;
     renderFinished?: (n: number) => void;
-    width: number;
-    height: number;
     page: PDFPageProxy;
     pageNum: number;
     viewport: PageViewport;
+    style?: CSSProperties;
+    // TODO: remove
+    // className?: string;
 };
 
-export default function Page({ state, width, height, page, pageNum, viewport, renderFinished }: PageProps) {
+export default function Page(
+    { state, page, pageNum, viewport, renderFinished, className = "", style = {} }: PageProps,
+) {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const renderTaskRef = useRef<RenderTask | null>(null);
     const internalStateRef = useRef<InternalState>(InternalState.CANVAS_NONE);
+    const { width, height } = viewport;
 
     const [canvasExists, setCanvasExists] = useState(false);
     const [error, setError] = useState(false);
@@ -61,7 +51,6 @@ export default function Page({ state, width, height, page, pageNum, viewport, re
             console.trace();
             invariant(false);
         }
-        // invariant(canvas, `canvas`);
         // PDF.js viewer states zeroing width/height
         // causes Firefox to release graphics resources immediately
         // reducing memory consumption
@@ -142,6 +131,7 @@ export default function Page({ state, width, height, page, pageNum, viewport, re
                     renderTaskRef.current = null;
                     internalStateRef.current = InternalState.CANVAS_DONE;
                     invariant(renderFinished, `no render callback when render finished`);
+                    console.log("calling render finished");
                     renderFinished(pageNum);
                 })
                 .catch((e: unknown) => {
@@ -160,11 +150,12 @@ export default function Page({ state, width, height, page, pageNum, viewport, re
         }
     }, [canvasExists]);
 
+    const styles = { ...style, width, height };
     return canvasExists
         ? (
-            <div>
-                <canvas ref={canvasRef} width={viewport.width} height={viewport.height} />
+            <div className="shadow" style={styles}>
+                <canvas ref={canvasRef} width={width} height={height} />
             </div>
         )
-        : <div style={{ width: 100, height: 100 }}>{error ? "error" : "Loading..."}</div>;
+        : <div className="bg-white shadow" style={styles}>{error ? "error" : "Loading..."}</div>;
 }

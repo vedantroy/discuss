@@ -1,4 +1,5 @@
 # 09-03-2022
+
 - EDD:
   - 1st idx in array go: none -> render -> none
 

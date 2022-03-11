@@ -1,8 +1,10 @@
+import invariant from "tiny-invariant";
 import { AsyncIteratorManager } from "./AsyncIteratorManager";
-import invariant from "tiny-invariant"
 
 const ALWAYS_RENDER = 3;
 const PRIORITY_GAP = 2;
+const makeDoNotCallMe = (tag: string) =>
+    (...args: unknown[]) => invariant(false, `called callback (${tag}) with ${JSON.stringify(args)} before ready`);
 
 function getPriority(currentPage: number, page: number) {
     return Math.abs(currentPage - page);
@@ -14,7 +16,8 @@ function rangeInclusive(a: number, b: number): number[] {
     return arr;
 }
 
-function makeRenderQueues(pages: number, pageBufferSize: number): ReadonlyArray<ReadonlyArray<number>> {
+export function makeRenderQueues(pages: number, pageBufferSize: number): ReadonlyArray<ReadonlyArray<number>> {
+    invariant(pageBufferSize % 2 === 0, `extra page buffer size was odd: ${pageBufferSize}`);
     const queues: number[][] = Array(pages);
     for (let currentPage = 1; currentPage <= pages; ++currentPage) {
         const halfBuf = pageBufferSize / 2;
@@ -41,6 +44,7 @@ function makeRenderQueues(pages: number, pageBufferSize: number): ReadonlyArray<
 // Get the 1st version done -- design decisions can be made later
 // you don't understand what matters itll it's deployed
 export type PageManagerOpts = {
+    renderQueues: ReadonlyArray<ReadonlyArray<number>>;
     pages: number;
     basePageWidth: number;
     basePageHeight: number;
@@ -52,12 +56,12 @@ export type PageManagerOpts = {
     // that are being rendered anyways
     pageBufferSize: number;
 
-    onY: (x: number) => void;
-    onX: (y: number) => void;
-    onPageNumber: (n: number) => void;
-    onPageRender: (n: number) => void;
-    onPageCancel: (n: number) => void;
-    onPageDestroy: (n: number) => void;
+    onY?: (x: number) => void;
+    onX?: (y: number) => void;
+    onPageNumber?: (n: number) => void;
+    onPageRender?: (n: number) => void;
+    onPageCancel?: (n: number) => void;
+    onPageDestroy?: (n: number) => void;
 };
 
 const noPreviousArgument = Symbol();
@@ -177,13 +181,15 @@ export default class PageManager {
         onX,
         onY,
         pageBufferSize,
+        renderQueues,
     }: PageManagerOpts) {
         invariant(
             pageBufferSize % 2 === 1 && pageBufferSize > 0,
             `page buffer size must be positive & odd, got ${pageBufferSize}`,
         );
 
-        this.renderQueues = makeRenderQueues(pages, pageBufferSize - 1);
+        this.renderQueues = renderQueues;
+        // this.renderQueues = makeRenderQueues(pages, pageBufferSize - 1);
         this.#renderQueueIdx = -1;
         this.#rendered = new Set();
         this.#currentRender = null;
@@ -201,12 +207,12 @@ export default class PageManager {
         this.#xUpdate = -1;
         this.#pageBufferSize = pageBufferSize;
 
-        this.onPageCancel = onPageCancel;
-        this.onPageNumber = onPageNumber;
-        this.onPageRender = onPageRender;
-        this.onPageDestroy = onPageDestroy;
-        this.onX = onX;
-        this.onY = onY;
+        this.onPageCancel = onPageCancel || makeDoNotCallMe("onPageCancel");
+        this.onPageNumber = onPageNumber || makeDoNotCallMe("onPageNumber");
+        this.onPageRender = onPageRender || makeDoNotCallMe("onPageRender");
+        this.onPageDestroy = onPageDestroy || makeDoNotCallMe("onPageDestroy");
+        this.onX = onX || makeDoNotCallMe("onX");
+        this.onY = onY || makeDoNotCallMe("onY");
 
         this.#onPageRenderIteratorManager = new AsyncIteratorManager();
         this.#onPageDestroyIteratorManager = new AsyncIteratorManager();
@@ -220,8 +226,11 @@ export default class PageManager {
     public renderFinished = (n?: number) => {
         invariant(typeof this.#currentRender === "number", `invalid current render: ${this.#currentRender}`);
         invariant(!this.#rendered.has(this.#currentRender!!), `render set already had: ${this.#currentRender}`);
-        if (typeof n === 'number') {
-            invariant(this.#currentRender === n, `expected outstanding render to be ${this.#currentRender} instead of ${n}`)
+        if (typeof n === "number") {
+            invariant(
+                this.#currentRender === n,
+                `expected outstanding render to be ${this.#currentRender} instead of ${n}`,
+            );
         }
         this.#rendered.add(this.#currentRender);
         this.#currentRender = null;
@@ -336,6 +345,7 @@ export default class PageManager {
 
         // Example: If scroll to page 2 then we have scrolled by (2 - 1) pages and 2 vGaps
         const startOfPageTop = this.#pageHeight * (page - 1) + this.#vGap * page;
+        // TODO: this hgap is broken, the pagemanager needs to take in total width
         const startOfPageLeft = this.#hGap;
 
         this.#yUpdate = startOfPageTop;
