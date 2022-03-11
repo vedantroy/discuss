@@ -76,6 +76,10 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
         queuedScrollYRef.current = y;
     }, []);
 
+    // Seems like pageContainerRef changes several times
+    // so we can't just one-and-done, set `scrollTop`
+    // instead we continuously set it until the user scrolls
+    // (at which point we nullify the value)
     if (pageContainerRef.current && queuedScrollYRef.current !== null) {
         const { current: pageContainer } = pageContainerRef;
         pageContainer.scrollTop = queuedScrollYRef.current;

@@ -22,6 +22,6 @@ export default function ViewerWrapper() {
     }, []);
 
     return loaded
-        ? <Viewer width={width} height={height} doc={docRef.current!!} firstPage={2} />
+        ? <Viewer width={width} height={height} doc={docRef.current!!} firstPage={3} />
         : <div>Fetching document ...</div>;
 }
