@@ -1,10 +1,9 @@
 import invariant from "tiny-invariant";
+import { makeDoNotCallMe } from "../common/helpers";
 import { AsyncIteratorManager } from "./AsyncIteratorManager";
 
 const ALWAYS_RENDER = 3;
 const PRIORITY_GAP = 2;
-const makeDoNotCallMe = (tag: string) =>
-    (...args: unknown[]) => invariant(false, `called callback (${tag}) with ${JSON.stringify(args)} before ready`);
 
 function getPriority(currentPage: number, page: number) {
     return Math.abs(currentPage - page);

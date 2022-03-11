@@ -34,8 +34,12 @@ type PageProps = {
 };
 
 export default function Page(
-    { state, page, pageNum, viewport, renderFinished, className = "", style = {} }: PageProps,
+    { state, page, pageNum, viewport, renderFinished, style = {} }: PageProps,
 ) {
+    if (state === RenderState.RENDER) {
+        console.timeEnd("firstRender");
+    }
+
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const renderTaskRef = useRef<RenderTask | null>(null);
     const internalStateRef = useRef<InternalState>(InternalState.CANVAS_NONE);
@@ -131,7 +135,6 @@ export default function Page(
                     renderTaskRef.current = null;
                     internalStateRef.current = InternalState.CANVAS_DONE;
                     invariant(renderFinished, `no render callback when render finished`);
-                    console.log("calling render finished");
                     renderFinished(pageNum);
                 })
                 .catch((e: unknown) => {

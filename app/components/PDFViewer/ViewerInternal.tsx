@@ -1,7 +1,7 @@
 import * as pdfjs from "pdfjs-dist";
 import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist/types/src/display/api";
 import { PageViewport } from "pdfjs-dist/types/src/display/display_utils";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import PageManager, { makeRenderQueues, PageManagerOpts } from "./controller/PageManager";
 import Page, { RenderState } from "./Page";
 // TODO: check bundle size
@@ -43,6 +43,7 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
     const [currentPage, setCurrentPage] = useState<number>(firstPage);
     const [pageStates, setPageStates] = useState<RenderState[]>(fill(new Array(doc.numPages), RenderState.NONE));
 
+    const queuedScrollYRef = useRef<number | null>(null);
     const { current: pageToPromise } = useRef<Record<number, Promise<number>>>({});
     const { current: pages } = useRef<PDFPageProxy[]>([]);
     const pageViewportRef = useRef<PageViewport | null>(null);
@@ -52,16 +53,17 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
     const { current: pm } = pageManagerRef;
     // fake is used for debug purposes
     const validPm = pm || { fake: true } as unknown as PageManager;
-    console.log(validPm);
     validPm.onPageRender = useCallback(async (pageNum: number) => {
         if (!allPagesLoaded) {
             await pageToPromise[pageNum - 1];
         }
         setPageStates(replaceAtIndex(pageStates, RenderState.RENDER, pageNum - 1));
     }, [pageStates, allPagesLoaded]);
+
     validPm.onPageCancel = useCallback((pageNum: number) => {
         setPageStates(replaceAtIndex(pageStates, RenderState.CANCEL, pageNum - 1));
     }, [pageStates]);
+
     validPm.onPageDestroy = useCallback((pageNum: number) => {
         setPageStates(replaceAtIndex(pageStates, RenderState.DESTROY, pageNum - 1));
     }, [pageStates]);
@@ -70,14 +72,14 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
     validPm.onX = useCallback((x: number) => {
         console.log("x: " + x);
     }, []);
-    validPm.onY = useCallback((y: number) => {
-        const { current: pageContainer } = pageContainerRef;
-        console.log("calling scroll cb");
-        console.log(validPm);
-        if (pageContainer) {
-            pageContainer.scrollTop = y;
-        }
+    validPm.onY = useCallback(async (y: number) => {
+        queuedScrollYRef.current = y;
     }, []);
+
+    if (pageContainerRef.current && queuedScrollYRef.current !== null) {
+        const { current: pageContainer } = pageContainerRef;
+        pageContainer.scrollTop = queuedScrollYRef.current;
+    }
 
     if (pm && startupState === StartupState.PAGE_MANAGER_LOADED) {
         pm.goToPage(firstPage);
@@ -132,6 +134,7 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
             setStartupState(StartupState.PAGE_MANAGER_LOADED);
 
             await Promise.all(promises);
+            console.timeEnd("allLoad");
             setAllPagesLoaded(true);
         };
         initializePages();
@@ -139,40 +142,28 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
 
     const Pages = useMemo(
         () => {
-            // In practice, pages are only displayed if the page
-            // manager exists ...
+            // Pages are only displayed if the page manager exists ...
             if (!pm) return [];
-            console.log("creating ref ...");
-            return (
-                <div
-                    ref={pageContainerRef}
-                    onScroll={e => {
-                        const scroll = (e.target as HTMLDivElement).scrollTop;
-                        pm.setY(scroll);
-                    }}
-                    className="grid justify-center w-screen overflow-scroll"
-                >
-                    {pageStates.map((state, idx) => {
-                        const style = {
-                            marginTop: V_GAP,
-                            ...(idx === pageStates.length - 1 && { marginBottom: V_GAP }),
-                        };
-                        return (
-                            <Page
-                                style={style}
-                                key={idx}
-                                viewport={pageViewportRef.current!!}
-                                pageNum={idx + 1}
-                                page={pages[idx]}
-                                state={state}
-                                {...(state === RenderState.RENDER && {
-                                    renderFinished: pm.renderFinished,
-                                })}
-                            />
-                        );
-                    })}
-                </div>
-            );
+            console.log("computing expensive");
+            return pageStates.map((state, idx) => {
+                const style = {
+                    marginTop: V_GAP,
+                    ...(idx === pageStates.length - 1 && { marginBottom: V_GAP }),
+                };
+                return (
+                    <Page
+                        style={style}
+                        key={idx}
+                        viewport={pageViewportRef.current!!}
+                        pageNum={idx + 1}
+                        page={pages[idx]}
+                        state={state}
+                        {...(state === RenderState.RENDER && {
+                            renderFinished: pm.renderFinished,
+                        })}
+                    />
+                );
+            });
         },
         [pageStates],
     );
@@ -184,7 +175,17 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
                 className="flex flex-col overflow-hidden bg-zinc-200"
             >
                 <div className="h-8">current page: {currentPage}</div>
-                {Pages}
+                <div
+                    ref={pageContainerRef}
+                    onScroll={e => {
+                        const scroll = (e.target as HTMLDivElement).scrollTop;
+                        queuedScrollYRef.current = null;
+                        pm.setY(scroll);
+                    }}
+                    className="grid justify-center w-screen overflow-scroll"
+                >
+                    {Pages}
+                </div>
             </div>
         )
         : <div>Loading..</div>;
