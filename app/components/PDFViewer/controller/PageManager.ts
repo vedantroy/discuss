@@ -1,6 +1,10 @@
 import invariant from "tiny-invariant";
 import { makeDoNotCallMe } from "../common/helpers";
 import { AsyncIteratorManager } from "./AsyncIteratorManager";
+// Ideally, this class would have no pdfjs imports b/c
+// it would be divorced from the implementation details
+// of pdfjs, but `PageViewport` is a handy layout class
+import type { PageViewport } from "pdfjs-dist";
 
 const ALWAYS_RENDER = 3;
 const PRIORITY_GAP = 2;
@@ -45,8 +49,7 @@ export function makeRenderQueues(pages: number, pageBufferSize: number): Readonl
 export type PageManagerOpts = {
     renderQueues: ReadonlyArray<ReadonlyArray<number>>;
     pages: number;
-    basePageWidth: number;
-    basePageHeight: number;
+    baseViewport: PageViewport;
 
     hGap: number;
     vGap: number;
@@ -84,10 +87,8 @@ export default class PageManager {
     readonly #pages: number;
     readonly #hGap: number;
     readonly #vGap: number;
-    readonly #basePageWidth: number;
-    readonly #basePageHeight: number;
-    readonly #pageWidth: number;
-    readonly #pageHeight: number;
+    readonly #viewport: PageViewport;
+    readonly #baseViewport: PageViewport;
     readonly #pageBufferSize: number;
     readonly renderQueues: ReadonlyArray<ReadonlyArray<number>>;
 
@@ -169,8 +170,7 @@ export default class PageManager {
 
     constructor({
         pages,
-        basePageHeight,
-        basePageWidth,
+        baseViewport,
         onPageNumber,
         vGap,
         hGap,
@@ -195,10 +195,8 @@ export default class PageManager {
         this.#currentPage = -1;
 
         this.#pages = pages;
-        this.#basePageHeight = basePageHeight;
-        this.#pageHeight = basePageHeight;
-        this.#basePageWidth = basePageWidth;
-        this.#pageWidth = basePageWidth;
+        this.#baseViewport = baseViewport;
+        this.#viewport = this.#baseViewport.clone();
         this.#vGap = vGap;
         this.#hGap = hGap;
         this.#getLastFlush = createLastValueHolder<FlushData>();
@@ -307,6 +305,10 @@ export default class PageManager {
         if (flush.xUpdate !== -1 && (noPrev || flush.xUpdate !== prevFlush.xUpdate)) {
             this.onX(flush.xUpdate);
         }
+    }
+
+    get #pageHeight() {
+        return this.#viewport.height;
     }
 
     get height() {

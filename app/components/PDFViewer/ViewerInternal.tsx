@@ -17,6 +17,11 @@ const PAGE_BUFFER_SIZE = 3;
 // set the new v_gap (doable, just not now ...)
 const V_GAP = 10;
 
+// Random things to fix:
+//  - make gotopage work
+// -  make height calcs work
+// - fix all expected render bugs
+
 type ViewerArgs = {
     // We can't do anything till we have the document ...
     doc: PDFDocumentProxy;
@@ -73,8 +78,14 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
         console.log("x: " + x);
     }, []);
     validPm.onY = useCallback(async (y: number) => {
+        console.log(y);
         queuedScrollYRef.current = y;
     }, []);
+
+    if (pageViewportRef.current) {
+        console.log("pgref");
+        console.log(pageViewportRef.current.height);
+    }
 
     // Seems like pageContainerRef changes several times
     // so we can't just one-and-done, set `scrollTop`
@@ -123,13 +134,13 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
             const promises = Object.values(pageToPromise);
             const firstPageLoadedNum = await Promise.race(promises);
             const firstPageLoaded = pages[firstPageLoadedNum - 1];
-            pageViewportRef.current = firstPageLoaded.getViewport({ scale: 1.0 });
+            const viewport = firstPageLoaded.getViewport({ scale: 1.0 });
+            pageViewportRef.current = viewport;
 
             const pm = new PageManager({
                 renderQueues,
+                baseViewport: viewport,
                 pages: doc.numPages,
-                basePageWidth: width,
-                basePageHeight: height,
                 hGap: 10,
                 vGap: V_GAP,
                 pageBufferSize: PAGE_BUFFER_SIZE,

@@ -1,6 +1,6 @@
 import { expect, it } from "@jest/globals";
 import _ from "lodash";
-import PageManager from "~/components/PDFViewer/controller/PageManager";
+import PageManager, { makeRenderQueues } from "~/components/PDFViewer/controller/PageManager";
 import { BASE_PAGE_HEIGHT, createPageManagerWithDefaults, H_GAP, PAGES, V_GAP } from "./utils";
 
 type ListenerName =
@@ -119,14 +119,15 @@ it("updates x/y & current page when going to a specific page", async () => {
 });
 
 it("creates valid render queues", () => {
-    let pm = createPageManagerWithDefaults({ pages: 3, pageBufferSize: 1 });
-    expect(pm.renderQueues).toStrictEqual([[1], [2], [3]]);
+    const dec = (x: number) => x - 1
+    let rq = makeRenderQueues(3, dec(1))
+    expect(rq).toStrictEqual([[1], [2], [3]]);
 
-    pm = createPageManagerWithDefaults({ pages: 3, pageBufferSize: 3 });
-    expect(pm.renderQueues).toStrictEqual([[1, 2, 3], [2, 1, 3], [3, 2, 1]]);
+    rq = makeRenderQueues(3, dec(3))
+    expect(rq).toStrictEqual([[1, 2, 3], [2, 1, 3], [3, 2, 1]]);
 
-    pm = createPageManagerWithDefaults({ pages: 3, pageBufferSize: 5 });
-    expect(pm.renderQueues).toStrictEqual([[1, 2, 3], [2, 1, 3], [3, 2, 1]]);
+    rq = makeRenderQueues(3, dec(5))
+    expect(rq).toStrictEqual([[1, 2, 3], [2, 1, 3], [3, 2, 1]]);
 });
 
 it("updates renders when going to a page", async () => {
