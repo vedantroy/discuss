@@ -88,7 +88,7 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
     const setY = useCallback(
         debounce((y: number) => {
             pm?.setY(y);
-        }, 10),
+        }, 1),
         [pm],
     );
 
@@ -142,14 +142,6 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
             const viewport = firstPageLoaded.getViewport({ scale: 1.0 });
             pageViewportRef.current = viewport;
 
-            console.log(JSON.stringify({
-                renderQueues,
-                pages: doc.numPages,
-                hGap: 10,
-                vGap: V_GAP,
-                pageBufferSize: PAGE_BUFFER_SIZE,
-            }));
-            console.log(viewport);
 
             const pm = new PageManager({
                 renderQueues,
@@ -174,11 +166,6 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
         () => {
             // Pages are only displayed if the page manager exists ...
             if (!pm) return [];
-
-            console.log("pages");
-            console.log(pageStates);
-            console.log("=dbg=");
-            console.log(pm.debugLog);
 
             return pageStates.map((state, idx) => {
                 const style = {
@@ -221,7 +208,6 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
                     onScroll={e => {
                         const scroll = (e.target as HTMLDivElement).scrollTop;
                         queuedScrollYRef.current = null;
-                        console.log("setting scroll");
                         setY(scroll);
                         // pm.setY(scroll);
                     }}
