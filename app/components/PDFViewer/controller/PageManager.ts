@@ -1,9 +1,13 @@
+// TODO: This code is fucked right now.. it just survives
+// b/c I debounce inputs every 10ms, which is ... fine? ig? (for now)
+// sad :( -- shoddy eng :///
+
 import invariant from "tiny-invariant";
 import { makeDoNotCallMe } from "../common/helpers";
-import { AsyncIteratorManager } from "./AsyncIteratorManager";
 // Ideally, this class would have no pdfjs imports b/c
 // it would be divorced from the implementation details
 // of pdfjs, but `PageViewport` is a handy layout class
+import { clone } from "lodash";
 import type { PageViewport } from "pdfjs-dist";
 
 const ALWAYS_RENDER = 3;
@@ -44,9 +48,19 @@ export function makeRenderQueues(pages: number, pageBufferSize: number): Readonl
     return queues;
 }
 
-// Get the 1st version done -- design decisions can be made later
-// you don't understand what matters itll it's deployed
+// TODO: Use conditional types
+type PageUpdate =
+    & (
+        | { type?: "render" }
+        | { type?: "destroy" }
+        | { type?: "cancel" }
+    )
+    & { page?: number; none: number | null };
+
+type Trace = Record<string, any>;
+
 export type PageManagerOpts = {
+    logInputs?: boolean;
     renderQueues: ReadonlyArray<ReadonlyArray<number>>;
     pages: number;
     baseViewport: PageViewport;
@@ -61,6 +75,10 @@ export type PageManagerOpts = {
     onY?: (x: number) => void;
     onX?: (y: number) => void;
     onPageNumber?: (n: number) => void;
+
+    // TODO: Test this ...
+    onPageChange?: (updates: PageUpdate) => void;
+
     onPageRender?: (n: number) => void;
     onPageCancel?: (n: number) => void;
     onPageDestroy?: (n: number) => void;
@@ -96,102 +114,123 @@ export default class PageManager {
     #yUpdate: number;
     #xUpdate: number;
 
-    #currentRender: number | null;
+    #current: {
+        render: number | null;
+        destroy: number | null;
+        cancel: number | null;
+    };
 
-    // For testing -- but no harm exposing the value as a getter
-    get currentRender() {
-        return this.#currentRender;
-    }
-
-    // Also for testing
-    get rendered() {
-        const copy = new Set();
-        for (const x of this.#rendered) {
-            copy.add(x);
-        }
-        return copy;
-    }
+    debugLog?: Array<any>;
 
     #renderQueueIdx: number;
     #rendered: Set<number>;
 
     #getLastFlush: (cur: FlushData) => typeof noPreviousArgument | FlushData;
 
-    // Async iterators are pull-based
-    // Call-backs are push based
-    // Application-code can use either w/o issue
-    // But tests are better written pull-based
-    // So we supply an async iterator interface for some of the harder to test functions
-    #onPageRenderIteratorManager: AsyncIteratorManager;
-    #onPageDestroyIteratorManager: AsyncIteratorManager;
-    #onPageCancelIteratorManager: AsyncIteratorManager;
-
     // These callbacks are public so tests are easier
+    onPageChange: ((x: PageUpdate) => void | Promise<void>) & { wrapped?: true };
+
     onPageNumber: (n: number) => void;
-    onPageRender: (n: number) => void | Promise<void>;
-    onPageDestroy: (n: number) => void;
-    onPageCancel: (n: number) => void;
     onX: (n: number) => void;
     onY: (n: number) => void;
 
-    createOnPageRenderIterator(n: number | null = null): AsyncIterable<number> {
-        return this.#onPageRenderIteratorManager.createIterable(n);
+    public renderFinished = (n: number) => {
+        const trace = this.#makeTrace({ entry: "renderFinished", n });
+        const { render } = this.#current;
+        if (typeof n === "number") {
+            if (n === this.#current.cancel && this.#current.render === null) {
+                trace.bounced = true;
+                return;
+            }
+            invariant(
+                render === n,
+                `expected outstanding render to be ${render} instead of ${n}`,
+            );
+        }
+        // if (typeof n === "number") {
+        // }
+        invariant(!this.#rendered.has(render!!), `render set already had: ${render}`);
+        this.#rendered.add(render!!);
+        this.#current.render = null;
+        this.#continueRender(null, trace);
+    };
+
+    #doOnPageRender(page: number, trace: Record<string, any>) {
+        invariant(this.#current.render === null, `current render was: ${this.#current.render}`);
+        this.#current.render = page;
     }
 
-    createOnPageDestroyIterator(n: number | null = null): AsyncIterable<number> {
-        return this.#onPageDestroyIteratorManager.createIterable(n);
+    public destroyFinished = (n: number) => {
+        this.#rendered.delete(n);
+        this.#cleanupHelper(n, "destroy");
+    };
+
+    #makeTrace({ entry, ...args }: Record<string, any>): Record<string, any> {
+        if (this.debugLog) {
+            const trace = { entry, ...args };
+            this.debugLog.push(trace);
+            return trace;
+        }
+        return {};
     }
 
-    createOnPageCancelIterator(n: number | null = null): AsyncIterable<number> {
-        return this.#onPageCancelIteratorManager.createIterable(n);
-    }
-
-    #doOnPageRender(page: number) {
-        invariant(this.#currentRender === null, `current render was: ${this.#currentRender}`);
-        this.#currentRender = page;
-        this.#ensureRenderSpace();
-        this.#onPageRenderIteratorManager.pushValue(page);
-        this.onPageRender(page);
+    #cleanupHelper(n: number, type: "cancel" | "destroy") {
+        const trace = this.#makeTrace({ entry: `${type}Finished`, n });
+        const expected = this.#current[type];
+        invariant(expected === n, `expected ${type} to be: ${expected} instead of ${n}`);
+        this.#current[type] = null;
+        this.#continueRender(n, trace);
     }
 
     #doOnPageDestroy(page: number) {
-        this.#onPageDestroyIteratorManager.pushValue(page);
-        this.onPageDestroy(page);
+        const canDestroy = this.#current.destroy === null;
+        if (canDestroy) {
+            this.#current.destroy = page;
+        }
+        return canDestroy;
     }
 
-    // Technically the arg isn't necessary
-    // since the consumer can keep-track of the current
-    // render, but the information makes life easier
-    #doOnPageCancel(page: number) {
-        this.#onPageCancelIteratorManager.pushValue(page);
-        this.#currentRender = null;
-        this.onPageCancel(page);
+    public cancelFinished = (n: number) => {
+        this.#cleanupHelper(n, "cancel");
+    };
+
+    #doOnPageCancel() {
+        const canCancel = !this.#current.cancel;
+        if (canCancel) {
+            invariant(this.#current.render !== null, `no existing render`);
+            this.#current.cancel = this.#current.render;
+            this.#current.render = null;
+        }
+        return canCancel;
     }
 
     constructor({
         pages,
         baseViewport,
+        onPageChange,
         onPageNumber,
         vGap,
         hGap,
-        onPageRender,
-        onPageDestroy,
-        onPageCancel,
         onX,
         onY,
         pageBufferSize,
         renderQueues,
+        logInputs,
     }: PageManagerOpts) {
         invariant(
             pageBufferSize % 2 === 1 && pageBufferSize > 0,
             `page buffer size must be positive & odd, got ${pageBufferSize}`,
         );
 
+        this.debugLog = logInputs ? [] : undefined;
         this.renderQueues = renderQueues;
-        // this.renderQueues = makeRenderQueues(pages, pageBufferSize - 1);
         this.#renderQueueIdx = -1;
         this.#rendered = new Set();
-        this.#currentRender = null;
+        this.#current = {
+            render: null,
+            destroy: null,
+            cancel: null,
+        };
         this.#currentPage = -1;
 
         this.#pages = pages;
@@ -204,84 +243,144 @@ export default class PageManager {
         this.#xUpdate = -1;
         this.#pageBufferSize = pageBufferSize;
 
-        this.onPageCancel = onPageCancel || makeDoNotCallMe("onPageCancel");
+        this.onPageChange = onPageChange || makeDoNotCallMe("onPageChange");
         this.onPageNumber = onPageNumber || makeDoNotCallMe("onPageNumber");
-        this.onPageRender = onPageRender || makeDoNotCallMe("onPageRender");
-        this.onPageDestroy = onPageDestroy || makeDoNotCallMe("onPageDestroy");
         this.onX = onX || makeDoNotCallMe("onX");
         this.onY = onY || makeDoNotCallMe("onY");
-
-        this.#onPageRenderIteratorManager = new AsyncIteratorManager();
-        this.#onPageDestroyIteratorManager = new AsyncIteratorManager();
-        this.#onPageCancelIteratorManager = new AsyncIteratorManager();
     }
 
     #resetRenderState() {
         this.#renderQueueIdx = 0;
     }
 
-    public renderFinished = (n?: number) => {
-        invariant(typeof this.#currentRender === "number", `invalid current render: ${this.#currentRender}`);
-        invariant(!this.#rendered.has(this.#currentRender!!), `render set already had: ${this.#currentRender}`);
-        if (typeof n === "number") {
-            invariant(
-                this.#currentRender === n,
-                `expected outstanding render to be ${this.#currentRender} instead of ${n}`,
-            );
-        }
-        this.#rendered.add(this.#currentRender);
-        this.#currentRender = null;
-        this.#continueRender();
-    };
+    public setY(y: number) {
+        const trace = this.#makeTrace({ entry: this.setY.name, y });
+        const height = this.height;
+        invariant(0 <= y && y <= this.height, `${y} > ${height}`);
 
-    // Eviction is O(N)
-    // This seems fine (not worth questionably micro-optimizing with a heap)
-    #ensureRenderSpace(): boolean {
-        const isFull = this.#rendered.size === this.#pageBufferSize;
-        if (isFull) {
-            let toEvict = null;
-            let minPriority = null;
-            for (const page of this.#rendered) {
-                const priority = getPriority(this.#currentPage, page);
-                // Lower numbers = higher priority
-                if (minPriority === null || minPriority < priority) {
-                    minPriority = priority;
-                    toEvict = page;
-                }
-            }
-            this.#rendered.delete(toEvict!!);
-            this.#doOnPageDestroy(toEvict!!);
-        }
-        return isFull;
+        const pageWithVGap = this.#pageHeight + this.#vGap;
+        const pagesOutOfScreen = Math.floor(y / pageWithVGap);
+        const remainingPixels = y % pageWithVGap;
+
+        this.#currentPage = 1
+            + pagesOutOfScreen
+            + (remainingPixels > this.#vGap + this.#pageHeight / 2 ? 1 : 0);
+
+        this.#flush(trace);
     }
 
-    #continueRender(): boolean {
+    /** @param page starts from 1 */
+    goToPage(page: number) {
+        const trace = this.#makeTrace({ entry: this.goToPage.name, page });
+        this.#invariantValidPage(page);
+
+        // Example: If scroll to page 2 then we have scrolled by (2 - 1) pages and 2 vGaps
+        const startOfPageTop = this.#pageHeight * (page - 1) + this.#vGap * page;
+        // TODO: this hgap is broken, the pagemanager needs to take in total width
+        const startOfPageLeft = this.#hGap;
+
+        this.#yUpdate = startOfPageTop;
+        this.#xUpdate = startOfPageLeft;
+        this.#currentPage = page;
+
+        this.#flush(trace);
+    }
+
+    #evictPage() {
+        let toEvict = this.#current.render || null;
+        let minPriority = this.#current.render ? getPriority(this.#currentPage, this.#current.render) : null;
+        for (const page of this.#rendered) {
+            const priority = getPriority(this.#currentPage, page);
+            // Lower numbers = higher priority
+            if (minPriority === null || minPriority < priority) {
+                minPriority = priority;
+                toEvict = page;
+            }
+        }
+
+        invariant(toEvict !== null, `no page to evict from page buffer`);
+        return toEvict;
+    }
+
+    #continueRender(none: number | null, trace: Record<string, any> = {}) {
+        trace.none = none;
+        trace.currentPage = this.#currentPage;
+        trace.startCurrent = clone(this.#current);
+
+        if (!this.onPageChange.wrapped) {
+            this.onPageChange.wrapped = true;
+            const og = this.onPageChange;
+            this.onPageChange = (...args: Parameters<typeof this.onPageChange>) => {
+                invariant(args.length === 1, `invalid args: ${JSON.stringify(args)}`);
+                trace.args = args[0];
+                trace.endCurrent = clone(this.#current);
+                const { none, page } = args[0];
+                if (none === page) args[0].none = null;
+                // if (typeof args[0].none === "number") {
+                //    invariant(args[0].none !== args[0].page, `page = none (${args[0].none})`);
+                // }
+                og(...args);
+            };
+        }
+
         const toRender = this.renderQueues[this.#currentPage - 1];
         while (this.#rendered.has(toRender[this.#renderQueueIdx]) && this.#renderQueueIdx < toRender.length) {
             this.#renderQueueIdx++;
         }
 
         // Case 1: We've rendered everything
-        if (this.#renderQueueIdx === toRender.length) return false;
-
-        const maybeRender = toRender[this.#renderQueueIdx];
-        if (this.#currentRender === null) {
-            // Case 2: No page is rendering, render ours
-            this.#doOnPageRender(maybeRender);
-            return true;
-        } else if (
-            this.#renderQueueIdx < ALWAYS_RENDER
-            || this.#renderQueueIdx - getPriority(this.#currentPage, this.#currentRender) > PRIORITY_GAP
-        ) {
-            // Case 3: We cancel the currently rendering page and render ours instead
-            this.#doOnPageCancel(this.#currentRender);
-            this.#doOnPageRender(maybeRender);
-            return true;
+        if (this.#renderQueueIdx === toRender.length) {
+            if (none !== null) this.onPageChange({ none });
+            else trace.noChange = true;
+            return;
         }
-        return false;
+
+        // Case 2: We can't render b/c there's no space
+        const pageBufferFull = this.#rendered.size === this.#pageBufferSize;
+        const pageBufferAlmostFull =
+            (this.#rendered.size === this.#pageBufferSize - 1 && this.#current.render !== null);
+
+        if (
+            pageBufferFull || pageBufferAlmostFull
+        ) {
+            const toEvict = this.#evictPage();
+            const type = toEvict === this.#current.render ? "cancel" : "destroy";
+            let takeAction = false;
+            if (toEvict === this.#current.render) {
+                takeAction = this.#doOnPageCancel();
+            } else {
+                takeAction = this.#doOnPageDestroy(toEvict);
+            }
+            if (takeAction) {
+                this.onPageChange({ type, page: toEvict, none });
+            }
+            trace.pageBufferFull = pageBufferFull;
+            trace.pageBufferAlmostFull = pageBufferAlmostFull;
+            return;
+        }
+
+        // Case 3: We can render but a page is already rendering
+        // and it's lower priority than us. Cancel it.
+        if (
+            this.#current.render !== null && this.#renderQueueIdx < ALWAYS_RENDER
+            && this.#renderQueueIdx - getPriority(this.#currentPage, this.#current.render) > PRIORITY_GAP
+        ) {
+            this.#doOnPageCancel();
+            this.onPageChange({ type: "cancel", page: this.#current.render, none });
+            return;
+        }
+
+        if (this.#current.render === null) {
+            // Case 4: We can render and there's no page blocking our way ...
+            const pageToRender = toRender[this.#renderQueueIdx];
+            this.#doOnPageRender(pageToRender, trace);
+            this.onPageChange({ type: "render", page: pageToRender, none });
+        } else {
+            trace.waitingForPage = this.#current.render;
+        }
     }
 
-    #flush() {
+    #flush(trace: Record<string, any> = {}) {
         const flush = {
             currentPage: this.#currentPage,
             yUpdate: this.#yUpdate,
@@ -294,8 +393,9 @@ export default class PageManager {
 
         if (noPrev || newPage) {
             this.onPageNumber(flush.currentPage);
+
             this.#resetRenderState();
-            this.#continueRender();
+            this.#continueRender(null, trace);
         }
 
         if (flush.yUpdate !== -1 && (noPrev || flush.yUpdate !== prevFlush.yUpdate)) {
@@ -321,38 +421,7 @@ export default class PageManager {
         return this.#pages * (this.#pageHeight + this.#vGap) + this.#vGap;
     }
 
-    public setY(y: number) {
-        const height = this.height;
-        invariant(0 <= y && y <= this.height, `${y} > ${height}`);
-
-        const pageWithVGap = this.#pageHeight + this.#vGap;
-        const pagesOutOfScreen = Math.floor(y / pageWithVGap);
-        const remainingPixels = y % pageWithVGap;
-
-        this.#currentPage = 1
-            + pagesOutOfScreen
-            + (remainingPixels > this.#vGap + this.#pageHeight / 2 ? 1 : 0);
-
-        this.#flush();
-    }
-
     #invariantValidPage(page: number) {
         invariant(1 <= page && page <= this.#pages, `Invalid page: ${page}`);
-    }
-
-    /** @param page starts from 1 */
-    goToPage(page: number) {
-        this.#invariantValidPage(page);
-
-        // Example: If scroll to page 2 then we have scrolled by (2 - 1) pages and 2 vGaps
-        const startOfPageTop = this.#pageHeight * (page - 1) + this.#vGap * page;
-        // TODO: this hgap is broken, the pagemanager needs to take in total width
-        const startOfPageLeft = this.#hGap;
-
-        this.#yUpdate = startOfPageTop;
-        this.#xUpdate = startOfPageLeft;
-        this.#currentPage = page;
-
-        this.#flush();
     }
 }

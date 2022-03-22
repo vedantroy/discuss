@@ -8,6 +8,7 @@
   },
   "includes": ["**/*.{ts,tsx,js,jsx,cjs,mjs,json,md}"],
   "excludes": [
+    "**/public",
     "**/node_modules",
     "**/*-lock.json",
     "**/build"

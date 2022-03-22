@@ -119,14 +119,14 @@ it("updates x/y & current page when going to a specific page", async () => {
 });
 
 it("creates valid render queues", () => {
-    const dec = (x: number) => x - 1
-    let rq = makeRenderQueues(3, dec(1))
+    const dec = (x: number) => x - 1;
+    let rq = makeRenderQueues(3, dec(1));
     expect(rq).toStrictEqual([[1], [2], [3]]);
 
-    rq = makeRenderQueues(3, dec(3))
+    rq = makeRenderQueues(3, dec(3));
     expect(rq).toStrictEqual([[1, 2, 3], [2, 1, 3], [3, 2, 1]]);
 
-    rq = makeRenderQueues(3, dec(5))
+    rq = makeRenderQueues(3, dec(5));
     expect(rq).toStrictEqual([[1, 2, 3], [2, 1, 3], [3, 2, 1]]);
 });
 

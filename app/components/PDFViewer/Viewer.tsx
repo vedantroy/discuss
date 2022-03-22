@@ -13,7 +13,7 @@ export default function ViewerWrapper() {
         async function go() {
             console.time("allLoad");
             console.time("firstRender");
-            const docTask = pdfjs.getDocument("/test2.pdf");
+            const docTask = pdfjs.getDocument("/test.pdf");
             const doc = await docTask.promise;
             docRef.current = doc;
             setLoaded(true);
@@ -22,6 +22,6 @@ export default function ViewerWrapper() {
     }, []);
 
     return loaded
-        ? <Viewer width={width} height={height} doc={docRef.current!!} firstPage={3} />
+        ? <Viewer width={width} height={height} doc={docRef.current!!} firstPage={8} />
         : <div>Fetching document ...</div>;
 }

@@ -1,17 +1,17 @@
 import { PageViewport } from "pdfjs-dist";
 import PageManager, { makeRenderQueues } from "~/components/PDFViewer/controller/PageManager";
 
-class MockPageViewport {
-    width: number
-    height: number
+export class MockPageViewport {
+    width: number;
+    height: number;
 
-    constructor({width, height}: { width: number, height: number}) {
-        this.width = width
-        this.height = height
+    constructor({ width, height }: { width: number; height: number }) {
+        this.width = width;
+        this.height = height;
     }
 
     clone(...args: unknown[]) {
-        return new MockPageViewport({ width: this.width, height: this.height })
+        return new MockPageViewport({ width: this.width, height: this.height });
     }
 }
 
@@ -35,11 +35,16 @@ export const createPageManagerWithDefaults = ({
     onPageDestroy = () => {},
     onPageCancel = () => {},
     pageBufferSize = 11,
+    logInputs = false,
+    renderQueues = [] as ReadonlyArray<ReadonlyArray<number>>,
 } = {}) => {
-    const renderQueues = makeRenderQueues(PAGES, pageBufferSize - 1);
+    if (renderQueues.length === 0) {
+        renderQueues = makeRenderQueues(PAGES, pageBufferSize - 1);
+    }
+
     return new PageManager({
         baseViewport: new MockPageViewport({ width: basePageWidth, height: basePageHeight }) as PageViewport,
-        renderQueues,
+        renderQueues: renderQueues!!,
         pages,
         hGap,
         vGap,
@@ -50,5 +55,6 @@ export const createPageManagerWithDefaults = ({
         onPageDestroy,
         pageBufferSize,
         onPageCancel,
+        logInputs,
     });
 };
