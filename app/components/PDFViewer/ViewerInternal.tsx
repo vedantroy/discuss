@@ -2,7 +2,7 @@ import * as pdfjs from "pdfjs-dist";
 import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist/types/src/display/api";
 import { PageViewport } from "pdfjs-dist/types/src/display/display_utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import PageManager, { makeRenderQueues } from "./controller/PageManager";
+import PageManager, { makeRenderQueues } from "./controller/PageManager2";
 import Page, { RenderState } from "./Page";
 // TODO: check bundle size
 import { debounce, fill, invert, range } from "lodash";
@@ -19,11 +19,6 @@ const PAGE_BUFFER_SIZE = 3;
 // set the new v_gap (doable, just not now ...)
 const V_GAP = 10;
 
-// Random things to fix:
-//  - make gotopage work
-// -  make height calcs work
-// - fix all expected render bugs
-
 type ViewerArgs = {
     // We can't do anything till we have the document ...
     doc: PDFDocumentProxy;
@@ -38,6 +33,10 @@ const StartupState = {
     WENT_TO_FIRST_PAGE: "went_to_first_page",
 } as const;
 type StartupState = typeof StartupState[keyof typeof StartupState];
+
+function isNum(x: unknown): x is number {
+    return typeof x === "number";
+}
 
 export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
     // TODO: Get this call out of here & into the parent
@@ -56,41 +55,32 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
     const { current: pm } = pageManagerRef;
     // fake is used for debug purposes
     const validPm = pm || { fake: true } as unknown as PageManager;
-    validPm.onPageChange = useCallback(async ({ type, page, none }) => {
+    validPm.onUpdate = useCallback(async ({ x, y, render, cancel, destroy, page, none }) => {
+        if (isNum(page)) setCurrentPage(page);
+
+        let copyChanged = false;
         const copy = [...pageStates];
-        if (type !== undefined) {
-            const idx = page!! - 1;
-            if (type === "render") {
-                if (!allPagesLoaded) await pageToPromise[idx];
-                copy[idx] = RenderState.RENDER;
-            } else if (type === "destroy") {
-                copy[idx] = RenderState.DESTROY;
-            } else if (type === "cancel") {
-                copy[idx] = RenderState.CANCEL;
-            } else invariant(false, `invalid type: ${type}`);
+        if (isNum(render)) {
+            if (!allPagesLoaded) await pageToPromise[render - 1];
+            copy[render - 1] = RenderState.RENDER;
+            copyChanged = true;
+        } else if (isNum(destroy)) {
+            copy[destroy - 1] = RenderState.DESTROY;
+            copyChanged = true;
+        } else if (isNum(cancel)) {
+            copy[cancel - 1] = RenderState.CANCEL;
+            copyChanged = true;
         }
 
-        if (none !== null) {
-            copy[none - 1] = RenderState.NONE;
+        if (isNum(y)) queuedScrollYRef.current = y;
+        for (let i = 0; i < none.length; ++i) {
+            copy[none[i] - 1] = RenderState.NONE;
+            copyChanged = true;
         }
 
-        setPageStates(copy);
+        if (copyChanged) console.log(copy);
+        if (copyChanged) setPageStates(copy);
     }, [pageStates, allPagesLoaded]);
-
-    validPm.onPageNumber = useCallback((n: number) => setCurrentPage(n), []);
-    validPm.onX = useCallback((x: number) => {
-        console.log("x: " + x);
-    }, []);
-    validPm.onY = useCallback(async (y: number) => {
-        queuedScrollYRef.current = y;
-    }, []);
-
-    const setY = useCallback(
-        debounce((y: number) => {
-            pm?.setY(y);
-        }, 1),
-        [pm],
-    );
 
     // Seems like pageContainerRef changes several times
     // so we can't just one-and-done, set `scrollTop`
@@ -142,7 +132,6 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
             const viewport = firstPageLoaded.getViewport({ scale: 1.0 });
             pageViewportRef.current = viewport;
 
-
             const pm = new PageManager({
                 renderQueues,
                 baseViewport: viewport,
@@ -150,13 +139,13 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
                 hGap: 10,
                 vGap: V_GAP,
                 pageBufferSize: PAGE_BUFFER_SIZE,
-                logInputs: true,
             });
+            console.log("STARTING PAGE MANAGER");
+            pm.start();
             pageManagerRef.current = pm;
             setStartupState(StartupState.PAGE_MANAGER_LOADED);
 
             await Promise.all(promises);
-            console.timeEnd("allLoad");
             setAllPagesLoaded(true);
         };
         initializePages();
@@ -208,8 +197,7 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
                     onScroll={e => {
                         const scroll = (e.target as HTMLDivElement).scrollTop;
                         queuedScrollYRef.current = null;
-                        setY(scroll);
-                        // pm.setY(scroll);
+                        pm.setY(scroll);
                     }}
                     className="grid justify-center w-screen overflow-scroll"
                 >
