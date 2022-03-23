@@ -2,7 +2,7 @@ import * as pdfjs from "pdfjs-dist";
 import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist/types/src/display/api";
 import { PageViewport } from "pdfjs-dist/types/src/display/display_utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import PageManager, { makeRenderQueues } from "./controller/PageManager2";
+import PageManager, { makeRenderQueues, PageState } from "./controller/PageManager2";
 import Page, { RenderState } from "./Page";
 // TODO: check bundle size
 import { debounce, fill, invert, range } from "lodash";
@@ -12,7 +12,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
 // pdfjs.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.13.216/pdf.worker.min.js";
 
 // TODO: replace this params
-const PAGE_BUFFER_SIZE = 3;
+const PAGE_BUFFER_SIZE = 9;
 
 // This can't be a prop b/c
 // we would need to call a method on the page manager to
@@ -55,31 +55,12 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
     const { current: pm } = pageManagerRef;
     // fake is used for debug purposes
     const validPm = pm || { fake: true } as unknown as PageManager;
-    validPm.onUpdate = useCallback(async ({ x, y, render, cancel, destroy, page, none }) => {
+    validPm.onUpdate = useCallback(async ({ x, y, states, page }) => {
         if (isNum(page)) setCurrentPage(page);
-
-        let copyChanged = false;
-        const copy = [...pageStates];
-        if (isNum(render)) {
-            if (!allPagesLoaded) await pageToPromise[render - 1];
-            copy[render - 1] = RenderState.RENDER;
-            copyChanged = true;
-        } else if (isNum(destroy)) {
-            copy[destroy - 1] = RenderState.DESTROY;
-            copyChanged = true;
-        } else if (isNum(cancel)) {
-            copy[cancel - 1] = RenderState.CANCEL;
-            copyChanged = true;
-        }
-
         if (isNum(y)) queuedScrollYRef.current = y;
-        for (let i = 0; i < none.length; ++i) {
-            copy[none[i] - 1] = RenderState.NONE;
-            copyChanged = true;
+        if (Array.isArray(states)) {
+            setPageStates(states.map(x => x === PageState.RENDER_DONE ? RenderState.RENDER : x));
         }
-
-        if (copyChanged) console.log(copy);
-        if (copyChanged) setPageStates(copy);
     }, [pageStates, allPagesLoaded]);
 
     // Seems like pageContainerRef changes several times

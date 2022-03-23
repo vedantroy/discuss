@@ -1,3 +1,4 @@
+import { fill } from "lodash";
 import { PageViewport } from "pdfjs-dist";
 import invariant from "tiny-invariant";
 import { makeDoNotCallMe } from "../common/helpers";
@@ -22,13 +23,15 @@ type Event =
         type: (typeof EventType.RENDER_FINISHED | typeof EventType.CANCEL_FINISHED | typeof EventType.DESTROY_FINISHED);
     } & { page: number });
 
-// const PageUpdateType = {
-//    NONE: "none",
-//    RENDER: "render",
-//    CANCEL: "cancel",
-//    DESTROY: "destroy",
-// } as const;
-// type PageUpdateType = typeof PageUpdateType[keyof typeof PageUpdateType];
+// This enum should be kept in sync w/ the stuff in Page.tsx
+export const PageState = {
+    NONE: "none",
+    RENDER: "render",
+    RENDER_DONE: "rendered",
+    CANCEL: "cancel",
+    DESTROY: "destroy",
+} as const;
+type PageState = typeof PageState[keyof typeof PageState];
 
 const InternalType = {
     DONE: "done",
@@ -50,15 +53,12 @@ export type PageManagerOpts = {
     vGap: number;
 };
 
-type PartialUpdate = Omit<Update, "none">;
+type PartialUpdate = Omit<Update, "states">;
 type Update = {
     x?: number;
     y?: number;
-    render?: number;
-    cancel?: number;
-    destroy?: number;
+    states?: PageState[];
     page?: number;
-    none: number[];
 };
 
 function getPriority(currentPage: number, page: number) {
@@ -108,10 +108,11 @@ export default class PageManager {
     readonly renderQueues: ReadonlyArray<ReadonlyArray<number>>;
     readonly #pageBufferSize: number;
 
+    #outstandingRender: number | null;
+    #states: PageState[];
     #rendered: Set<number>;
     #renderQueueIdx: number;
     #currentPage: number;
-    #outstanding: { render: number | null };
     #update: PartialUpdate | null;
     onUpdate: (u: Update) => void;
 
@@ -122,24 +123,27 @@ export default class PageManager {
         );
         this.#events = [];
         this.#running = false;
-        this.#rendered = new Set();
         this.#renderQueueIdx = -1;
         this.#currentPage = -1;
         this.renderQueues = renderQueues;
-        this.#outstanding = { render: null };
+        this.#outstandingRender = null;
         this.#pageBufferSize = pageBufferSize;
         this.#update = null;
+        this.#rendered = new Set();
         this.#vGap = vGap;
         this.#hGap = hGap;
         this.#baseViewport = baseViewport;
         this.#viewport = baseViewport;
         this.#pages = pages;
+        this.#states = fill(new Array(pages), PageState.NONE);
         this.onUpdate = makeDoNotCallMe("onUpdate");
     }
 
     #evictPage() {
-        let toEvict = this.#outstanding.render || null;
-        let minPriority = this.#outstanding.render ? getPriority(this.#currentPage, this.#outstanding.render) : null;
+        let toEvict = Number.isFinite(this.#outstandingRender) ? this.#outstandingRender : null;
+        let minPriority = Number.isFinite(this.#outstandingRender)
+            ? getPriority(this.#currentPage, this.#outstandingRender!!)
+            : null;
         for (const page of this.#rendered) {
             const priority = getPriority(this.#currentPage, page);
             // Lower numbers = higher priority
@@ -164,19 +168,19 @@ export default class PageManager {
         }
 
         const pageToRender = toRender[this.#renderQueueIdx];
-        if (pageToRender === this.#outstanding.render) {
-            return { action: InternalType.BLOCKED_SELF, page: this.#outstanding.render };
+        if (pageToRender === this.#outstandingRender) {
+            return { action: InternalType.BLOCKED_SELF, page: this.#outstandingRender };
         }
 
         const pageBufferFull = this.#rendered.size === this.#pageBufferSize;
         const pageBufferAlmostFull =
-            (this.#rendered.size === this.#pageBufferSize - 1 && this.#outstanding.render !== null);
+            (this.#rendered.size === this.#pageBufferSize - 1 && this.#outstandingRender !== null);
 
         if (pageBufferFull || pageBufferAlmostFull) {
             // Case 2: We can't render b/c there's no space
             const toEvict = this.#evictPage();
             return {
-                action: toEvict === this.#outstanding.render
+                action: toEvict === this.#outstandingRender
                     ? InternalType.CANCEL
                     : InternalType.DESTROY,
                 page: toEvict,
@@ -186,15 +190,15 @@ export default class PageManager {
         // Case 3: We can render but a page is already rendering
         // and it's lower priority than us. Cancel it.
         if (
-            this.#outstanding.render !== null && this.#renderQueueIdx < ALWAYS_RENDER
-            && this.#renderQueueIdx - getPriority(this.#currentPage, this.#outstanding.render) > PRIORITY_GAP
+            this.#outstandingRender !== null && this.#renderQueueIdx < ALWAYS_RENDER
+            && this.#renderQueueIdx - getPriority(this.#currentPage, this.#outstandingRender) > PRIORITY_GAP
         ) {
-            return { action: InternalType.CANCEL, page: this.#outstanding.render };
+            return { action: InternalType.CANCEL, page: this.#outstandingRender };
         }
 
-        return this.#outstanding.render === null
+        return this.#outstandingRender === null
             ? { action: InternalType.RENDER, page: pageToRender }
-            : { action: InternalType.BLOCKED_OTHER, page: this.#outstanding.render };
+            : { action: InternalType.BLOCKED_OTHER, page: this.#outstandingRender };
     }
 
     get #pageHeight() {
@@ -263,12 +267,6 @@ export default class PageManager {
 
     #loop = () => {
         let movementEvent: null | { event: Event; idx: number } = null;
-        const pageToEvent: Record<
-            number,
-            typeof EventType.RENDER_FINISHED | typeof EventType.CANCEL_FINISHED | typeof EventType.DESTROY_FINISHED
-        > = {};
-
-        let none: number[] = [];
         let newUpdate: PartialUpdate = {};
 
         if (this.#events.length === 0) {
@@ -277,43 +275,50 @@ export default class PageManager {
             return;
         }
 
+        const oldStates = this.#states.slice();
         const events = this.#events.slice();
+        console.log("EVENT: " + events.length);
         this.#events = [];
 
         let continueRender = false;
-        for (let i = events.length - 1; i >= 0; --i) {
+        for (let i = 0; i < events.length; ++i) {
             const event = events[i];
-            switch (event.type) {
+            const { type } = event;
+            switch (type) {
                 case EventType.SET_Y:
                 case EventType.GO_TO_PAGE:
-                    movementEvent ??= { event, idx: i };
+                    movementEvent = { event, idx: i };
                     break;
                 // case EventType.RESIZE:
                 //    break;
                 case EventType.RENDER_FINISHED:
                 case EventType.DESTROY_FINISHED:
                 case EventType.CANCEL_FINISHED:
-                    if (event.type === EventType.CANCEL_FINISHED) {
-                        console.log("REGISTERING CANCEL" + event.page);
-                    }
                     continueRender = true;
                     const { page } = event;
-                    if (pageToEvent[page] === undefined) {
-                        const isRender = event.type === EventType.RENDER_FINISHED;
-                        isRender
-                            ? this.#rendered.add(page)
-                            : this.#rendered.delete(page);
-                        if (!isRender) {
-                            // TODO: Does this need to be an array??
-                            none.push(page);
-                        } else {
-                            this.#outstanding.render = null;
-                        }
-                        // this.#outstanding.render = null;
-                        pageToEvent[page] = event.type;
-                    }
+                    const idx = page - 1;
+                    const oldState = this.#states[idx];
+                    if (type === EventType.RENDER_FINISHED) {
+                        invariant(oldState === PageState.RENDER, `invalid state: ${oldState}`);
+                        this.#states[idx] = PageState.RENDER_DONE;
+                        this.#outstandingRender = null;
+                    } else if (type === EventType.DESTROY_FINISHED) {
+                        invariant(oldState === PageState.DESTROY, `invalid state: ${oldState}`);
+                        this.#states[idx] = PageState.NONE;
+                    } else if (type === EventType.CANCEL_FINISHED) {
+                        invariant(oldState === PageState.CANCEL, `invalid state: ${oldState}`);
+                        this.#states[idx] = PageState.NONE;
+                    } else invariant(false, `invalid event: ${type}`);
                     break;
             }
+        }
+
+        if (continueRender) {
+            this.#rendered = new Set(
+                this.#states
+                    .map((x, i) => x === PageState.RENDER_DONE ? i + 1 : null)
+                    .filter(i => i !== null),
+            ) as Set<number>;
         }
 
         if (movementEvent !== null) {
@@ -339,8 +344,6 @@ export default class PageManager {
                 this.#renderQueueIdx = 0;
             }
             const { action, page } = this.#continueRender();
-            console.log(events);
-            console.log(action, page);
             if (
                 action !== InternalType.BLOCKED_OTHER
                 && action !== InternalType.BLOCKED_SELF
@@ -348,22 +351,31 @@ export default class PageManager {
             ) {
                 invariant(typeof page === "number", `invalid page: ${page} for action: ${action}`);
                 newUpdate = { ...newUpdate, [action]: page };
-                none = none.filter(x => x !== page);
+                const oldState = this.#states[page - 1];
                 if (action === InternalType.RENDER) {
-                    invariant(this.#outstanding.render === null, `existing render: ${this.#outstanding.render}`);
-                    this.#outstanding.render = page;
-                } else {
-                    console.log("SETTING OUT-STANDING TO NULL");
-                    this.#outstanding.render = null;
+                    invariant(this.#outstandingRender === null, `existing render: ${this.#outstandingRender}`);
+                    invariant(oldState === PageState.NONE, `invalid state: ${oldState}`);
+                    this.#outstandingRender = page;
+                    this.#states[page - 1] = PageState.RENDER;
+                } else if (action === InternalType.DESTROY) {
+                    invariant(oldState === PageState.RENDER_DONE, `invalid state: ${oldState}`);
+                    this.#states[page - 1] = PageState.DESTROY;
+                } else if (action === InternalType.CANCEL) {
+                    invariant(oldState === PageState.RENDER, `invalid state: ${oldState}`);
                 }
             }
         }
 
-        console.log(newUpdate, this.#update);
+        let statesChanged = false;
+        for (let i = 0; i < oldStates.length; ++i) {
+            if (this.#states[i] !== PageState.RENDER_DONE && this.#states[i] !== oldStates[i]) {
+                statesChanged = true;
+            }
+        }
 
-        if (noPrev) this.onUpdate({ ...newUpdate, none });
+        if (noPrev) this.onUpdate({ ...newUpdate, states: this.#states });
         else {
-            const diffed: PartialUpdate = {};
+            const diffed: Update = {};
             let notEmpty = false;
             for (const [k, v] of Object.entries(newUpdate)) {
                 if (v !== this.#update!![k as keyof PartialUpdate]) {
@@ -371,7 +383,8 @@ export default class PageManager {
                     notEmpty = true;
                 }
             }
-            if (notEmpty) this.onUpdate({ ...diffed, none });
+            if (statesChanged) diffed.states = this.#states;
+            if (notEmpty) this.onUpdate(diffed);
         }
 
         this.#update = newUpdate;
