@@ -13,7 +13,7 @@ export default function ViewerWrapper() {
         async function go() {
             console.time("allLoad");
             console.time("firstRender");
-            const docTask = pdfjs.getDocument("/test.pdf");
+            const docTask = pdfjs.getDocument("/test2.pdf");
             const doc = await docTask.promise;
             docRef.current = doc;
             setLoaded(true);

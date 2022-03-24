@@ -6,6 +6,7 @@ import { PageViewport } from "pdfjs-dist/types/web/interfaces";
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import invariant from "tiny-invariant";
+import gif from "./loading-icon.gif";
 
 const InternalState = {
     CANVAS_NONE: "canvas_none",
@@ -116,18 +117,8 @@ function Page(
             case RenderState.CANCEL:
                 switch (internal) {
                     case InternalState.CANVAS_NONE:
-                        assertInvalid();
                     case InternalState.CANVAS_DONE:
-                        invariant(cancelFinished, `Invalid cleanup callback: ${stateDescription}`);
-                        console.log("RACE CONDITION ***");
-                        // *Maybe* this could happen if
-                        //  - Rendering starts
-                        //  - Page manager issues cancel callback
-                        //  - Race condition where we receive the cancel before we tell
-                        //    the page manager we finished rendering
-                        deleteCanvas(InternalState.CANVAS_NONE);
-                        cancelFinished(pageNum);
-                        break;
+                        assertInvalid();
                     case InternalState.CANVAS_RENDERING:
                         const { current: renderTask } = renderTaskRef;
                         // Sometimes, we go from Rendering -> Cancel before
@@ -170,9 +161,6 @@ function Page(
     useEffect(() => {
         const { current: internal } = internalStateRef;
         if (canvasExists && internal === InternalState.CANVAS_RENDERING) {
-            console.log(`Start rendering: ${stateDescription}`);
-            console.timeEnd("firstRender");
-
             const { current: canvas } = canvasRef;
             invariant(canvas, `no canvas even when canvasExists=${canvasExists}`);
             const ctx = canvas.getContext("2d");
@@ -213,7 +201,6 @@ function Page(
     }, [canvasExists]);
 
     const styles = { ...style, width, height };
-    console.log(textInfo);
     return canvasExists
         ? (
             <div className="shadow relative" style={styles}>
@@ -230,7 +217,21 @@ function Page(
                     : null}
             </div>
         )
-        : <div className="bg-black shadow" style={styles}>{error ? "error" : "Loading..."}</div>;
+        : (
+            <div
+                // Tailwind CSS was not working for the background color
+                style={{
+                    background: `url(${gif})`,
+                    backgroundPosition: "center",
+                    backgroundRepeat: "no-repeat",
+                    backgroundColor: "white",
+                    ...styles,
+                }}
+                className="shadow"
+            >
+                {error ? "error" : ""}
+            </div>
+        );
 }
 
 export default Page;
