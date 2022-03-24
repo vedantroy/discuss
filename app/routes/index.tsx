@@ -1,4 +1,4 @@
-import Viewer from "~/components/PDFViewer/Viewer";
+import Viewer from "~/components/PDFViewer/display/Viewer";
 
 export default function Index() {
     return <Viewer />;

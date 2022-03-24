@@ -1,7 +1,7 @@
 // TODO: Remove the invariants & just use if-stmts instead
 import type { PDFPageProxy } from "pdfjs-dist";
-import { RenderingCancelledException } from "pdfjs-dist";
-import { RenderParameters, RenderTask } from "pdfjs-dist/types/src/display/api";
+import { RenderingCancelledException, renderTextLayer } from "pdfjs-dist";
+import { RenderParameters, RenderTask, TextContent } from "pdfjs-dist/types/src/display/api";
 import { PageViewport } from "pdfjs-dist/types/web/interfaces";
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
@@ -28,7 +28,7 @@ type PageProps = {
     renderFinished?: (n: number) => void;
     cancelFinished?: (n: number) => void;
     destroyFinished?: (n: number) => void;
-    page: PDFPageProxy;
+    page?: PDFPageProxy;
     pageNum: number;
     viewport: PageViewport;
     style?: CSSProperties;
@@ -39,8 +39,11 @@ type PageProps = {
 function Page(
     { state, page, pageNum, viewport, renderFinished, destroyFinished, cancelFinished, style = {} }: PageProps,
 ) {
+    const [textInfo, setTextInfo] = useState<{ html: string } | null>(null);
+
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const renderTaskRef = useRef<RenderTask | null>(null);
+    // const renderTextTaskRef = useRef<TextLayerRenderTask | null>(null)
     const internalStateRef = useRef<InternalState>(InternalState.CANVAS_NONE);
     const cleanupRef = useRef<((n: number) => void) | undefined>(destroyFinished || cancelFinished);
     const { width, height } = viewport;
@@ -65,6 +68,38 @@ function Page(
     }
 
     useEffect(() => {
+        let cancel = false;
+        if (page === undefined) return;
+        async function go() {
+            const frag = document.createDocumentFragment();
+            const text = page!!.streamTextContent();
+            const task = renderTextLayer({
+                // @ts-ignore https://github.com/mozilla/pdf.js/issues/14716
+                container: frag,
+                viewport,
+                textContentStream: text,
+            });
+            try {
+                await task.promise;
+                if (!cancel) {
+                    // TODO: Is this a memory leak?
+                    const rootElement = document.createElement("div");
+                    rootElement.appendChild(frag);
+                    const text = rootElement.innerHTML;
+                    setTextInfo({ html: text });
+                }
+            } catch (e) {
+                console.log("TEXT RENDER ERROR");
+                console.error(e);
+            }
+        }
+        go();
+        return () => {
+            cancel = true;
+        };
+    }, [page, viewport.width, viewport.height]);
+
+    useEffect(() => {
         const { current: internal } = internalStateRef;
         const assertInvalid = () => invariant(false, `invalid: ${stateDescription}`);
 
@@ -85,7 +120,6 @@ function Page(
                     case InternalState.CANVAS_DONE:
                         invariant(cancelFinished, `Invalid cleanup callback: ${stateDescription}`);
                         console.log("RACE CONDITION ***");
-                        // *Maybe* this could happen if
                         // *Maybe* this could happen if
                         //  - Rendering starts
                         //  - Page manager issues cancel callback
@@ -137,6 +171,7 @@ function Page(
         const { current: internal } = internalStateRef;
         if (canvasExists && internal === InternalState.CANVAS_RENDERING) {
             console.log(`Start rendering: ${stateDescription}`);
+            console.timeEnd("firstRender");
 
             const { current: canvas } = canvasRef;
             invariant(canvas, `no canvas even when canvasExists=${canvasExists}`);
@@ -147,15 +182,13 @@ function Page(
                 canvasContext: ctx,
                 viewport,
             };
-            const task = page.render(renderArgs);
+            const task = page!!.render(renderArgs);
             renderTaskRef.current = task;
             task.promise
                 .then(() => {
                     internalStateRef.current = InternalState.CANVAS_DONE;
                     renderTaskRef.current = null;
-                    console.log(`${pageNum}: set to null`);
                     invariant(renderFinished, `no render callback when render finished`);
-                    console.log(`${pageNum}: render finished`);
                     renderFinished(pageNum);
                 })
                 .catch((e: unknown) => {
@@ -169,7 +202,6 @@ function Page(
                         internalStateRef.current = InternalState.ERROR;
                         setError(true);
                     } else {
-                        console.log(`${pageNum}: cancelling`);
                         invariant(cleanupRef.current, `invalid cleanup`);
                         // If we don't use a ref then the closure doesn't capture the latest
                         // value of `cleanupFinished` leading to function is undefined errors
@@ -177,13 +209,25 @@ function Page(
                     }
                 });
         }
+        // TODO: Probably need to do viewport stuff for resize
     }, [canvasExists]);
 
     const styles = { ...style, width, height };
+    console.log(textInfo);
     return canvasExists
         ? (
-            <div className="shadow" style={styles}>
+            <div className="shadow relative" style={styles}>
                 <canvas ref={canvasRef} width={width} height={height} />
+                {textInfo
+                    ? (
+                        <div
+                            style={{ width, height }}
+                            className="PageText"
+                            dangerouslySetInnerHTML={{ __html: textInfo.html }}
+                        >
+                        </div>
+                    )
+                    : null}
             </div>
         )
         : <div className="bg-black shadow" style={styles}>{error ? "error" : "Loading..."}</div>;

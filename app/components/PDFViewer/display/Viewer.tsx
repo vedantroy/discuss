@@ -1,8 +1,8 @@
 import * as pdfjs from "pdfjs-dist";
 import { PDFDocumentProxy } from "pdfjs-dist/types/src/display/api";
 import { useEffect, useRef, useState } from "react";
-import Viewer from "~/components/PDFViewer/ViewerInternal";
 import useWindowDimensions from "./useWindowDimensions";
+import Viewer from "./ViewerInternal";
 
 export default function ViewerWrapper() {
     const [loaded, setLoaded] = useState(false);
@@ -13,7 +13,7 @@ export default function ViewerWrapper() {
         async function go() {
             console.time("allLoad");
             console.time("firstRender");
-            const docTask = pdfjs.getDocument("/test2.pdf");
+            const docTask = pdfjs.getDocument("/test.pdf");
             const doc = await docTask.promise;
             docRef.current = doc;
             setLoaded(true);

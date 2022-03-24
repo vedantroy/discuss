@@ -1,5 +1,6 @@
 import { Links, LiveReload, Meta, Outlet, Scripts, ScrollRestoration } from "remix";
 import type { MetaFunction } from "remix";
+import pdfStyles from "~/components/PDFViewer/styles/page.css";
 import styles from "./styles/app.css";
 
 export const meta: MetaFunction = () => {
@@ -7,7 +8,7 @@ export const meta: MetaFunction = () => {
 };
 
 export function links() {
-    return [{ rel: "stylesheet", href: styles }];
+    return [{ rel: "stylesheet", href: styles }, { rel: "stylesheet", href: pdfStyles }];
 }
 
 export default function App() {

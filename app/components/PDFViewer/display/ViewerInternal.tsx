@@ -1,9 +1,10 @@
 import * as pdfjs from "pdfjs-dist";
-import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist/types/src/display/api";
+import type { PDFDocumentProxy, PDFPageProxy, TextContent } from "pdfjs-dist/types/src/display/api";
 import { PageViewport } from "pdfjs-dist/types/src/display/display_utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import PageManager, { makeRenderQueues, PageState } from "./controller/PageManager2";
+import PageManager, { makeRenderQueues, PageState } from "../controller/PageManager";
 import Page, { RenderState } from "./Page";
+
 // TODO: check bundle size
 import { debounce, fill, invert, range } from "lodash";
 import invariant from "tiny-invariant";
@@ -12,7 +13,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
 // pdfjs.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.13.216/pdf.worker.min.js";
 
 // TODO: replace this params
-const PAGE_BUFFER_SIZE = 9;
+const PAGE_BUFFER_SIZE = 5;
 
 // This can't be a prop b/c
 // we would need to call a method on the page manager to
@@ -47,7 +48,11 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
 
     const queuedScrollYRef = useRef<number | null>(null);
     const { current: pageToPromise } = useRef<Record<number, Promise<number>>>({});
-    const { current: pages } = useRef<PDFPageProxy[]>([]);
+    // We don't store text content here (although that would make design simpler)
+    // B/c getting text content can take 600 ms ... which is too high for 1st load
+    const { current: pages } = useRef<Array<{ proxy: PDFPageProxy } | undefined>>(
+        fill(new Array(doc.numPages), undefined),
+    );
     const pageViewportRef = useRef<PageViewport | null>(null);
     const pageManagerRef = useRef<PageManager | null>(null);
     const pageContainerRef = useRef<HTMLDivElement | null>(null);
@@ -56,6 +61,16 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
     // fake is used for debug purposes
     const validPm = pm || { fake: true } as unknown as PageManager;
     validPm.onUpdate = useCallback(async ({ x, y, states, page }) => {
+        if (!allPagesLoaded && states) {
+            const idxs = states
+                .map((x, i) => x === PageState.RENDER ? i : null)
+                .filter(x => x !== null) as number[];
+
+            for (const idx of idxs) {
+                // TODO: If we ever hit this, we'll deal w/ it
+                invariant(pages[idx], `still loading page: ${idx + 1}`);
+            }
+        }
         if (isNum(page)) setCurrentPage(page);
         if (isNum(y)) queuedScrollYRef.current = y;
         if (Array.isArray(states)) {
@@ -79,6 +94,7 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
 
     useEffect(() => {
         const initializePages = async () => {
+            console.time("firstRender");
             const renderQueues = makeRenderQueues(doc.numPages, PAGE_BUFFER_SIZE - 1);
 
             const firstRenderQueue = renderQueues[firstPage - 1];
@@ -90,7 +106,7 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
             async function getPage(pageNum: number) {
                 try {
                     const pageProxy = await doc.getPage(pageNum);
-                    pages[pageNum - 1] = pageProxy;
+                    pages[pageNum - 1] = { proxy: pageProxy };
                 } catch (e: unknown) {
                     throw `Failed to get page ${pageNum} with error: ${e}`;
                 }
@@ -110,7 +126,7 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
             const promises = Object.values(pageToPromise);
             const firstPageLoadedNum = await Promise.race(promises);
             const firstPageLoaded = pages[firstPageLoadedNum - 1];
-            const viewport = firstPageLoaded.getViewport({ scale: 1.0 });
+            const viewport = firstPageLoaded!!.proxy.getViewport({ scale: 1.0 });
             pageViewportRef.current = viewport;
 
             const pm = new PageManager({
@@ -121,7 +137,6 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
                 vGap: V_GAP,
                 pageBufferSize: PAGE_BUFFER_SIZE,
             });
-            console.log("STARTING PAGE MANAGER");
             pm.start();
             pageManagerRef.current = pm;
             setStartupState(StartupState.PAGE_MANAGER_LOADED);
@@ -148,7 +163,7 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
                         key={idx}
                         viewport={pageViewportRef.current!!}
                         pageNum={idx + 1}
-                        page={pages[idx]}
+                        page={pages[idx]?.proxy}
                         state={state}
                         {...(state === RenderState.RENDER && {
                             renderFinished: pm.renderFinished,

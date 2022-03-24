@@ -1,17 +1,65 @@
-// TODO: This code is fucked right now.. it just survives
-// b/c I debounce inputs every 10ms, which is ... fine? ig? (for now)
-// sad :( -- shoddy eng :///
-
+import { fill } from "lodash";
+import { PageViewport } from "pdfjs-dist";
 import invariant from "tiny-invariant";
-import { makeDoNotCallMe } from "../common/helpers";
-// Ideally, this class would have no pdfjs imports b/c
-// it would be divorced from the implementation details
-// of pdfjs, but `PageViewport` is a handy layout class
-import { clone } from "lodash";
-import type { PageViewport } from "pdfjs-dist";
+import { makeDoNotCallMe } from "./helpers";
 
 const ALWAYS_RENDER = 3;
 const PRIORITY_GAP = 2;
+
+const EventType = {
+    GO_TO_PAGE: "go_to_page",
+    SET_Y: "set_y",
+    RESIZE: "resize",
+    RENDER_FINISHED: "render_finished",
+    CANCEL_FINISHED: "cancel_finished",
+    DESTROY_FINISHED: "destroy_finished",
+} as const;
+type EventType = typeof EventType[keyof typeof EventType];
+
+type Event =
+    | { type: (typeof EventType.SET_Y); y: number }
+    | { type: (typeof EventType.GO_TO_PAGE); page: number }
+    | ({
+        type: (typeof EventType.RENDER_FINISHED | typeof EventType.CANCEL_FINISHED | typeof EventType.DESTROY_FINISHED);
+    } & { page: number });
+
+// This enum should be kept in sync w/ the stuff in Page.tsx
+export const PageState = {
+    NONE: "none",
+    RENDER: "render",
+    RENDER_DONE: "rendered",
+    CANCEL: "cancel",
+    DESTROY: "destroy",
+} as const;
+export type PageState = typeof PageState[keyof typeof PageState];
+
+const InternalType = {
+    DONE: "done",
+    BLOCKED_SELF: "blocked_self",
+    BLOCKED_OTHER: "blocked_other",
+    RENDER: "render",
+    CANCEL: "cancel",
+    DESTROY: "destroy",
+} as const;
+type InternalType = typeof InternalType[keyof typeof InternalType];
+
+export type PageManagerOpts = {
+    pageBufferSize: number;
+    renderQueues: ReadonlyArray<ReadonlyArray<number>>;
+    pages: number;
+    baseViewport: PageViewport;
+
+    hGap: number;
+    vGap: number;
+};
+
+type PartialUpdate = Omit<Update, "states">;
+type Update = {
+    x?: number;
+    y?: number;
+    states?: PageState[];
+    page?: number;
+};
 
 function getPriority(currentPage: number, page: number) {
     return Math.abs(currentPage - page);
@@ -48,247 +96,54 @@ export function makeRenderQueues(pages: number, pageBufferSize: number): Readonl
     return queues;
 }
 
-// TODO: Use conditional types
-type PageUpdate =
-    & (
-        | { type?: "render" }
-        | { type?: "destroy" }
-        | { type?: "cancel" }
-    )
-    & { page?: number; none: number | null };
-
-type Trace = Record<string, any>;
-
-export type PageManagerOpts = {
-    logInputs?: boolean;
-    renderQueues: ReadonlyArray<ReadonlyArray<number>>;
-    pages: number;
-    baseViewport: PageViewport;
-
-    hGap: number;
-    vGap: number;
-
-    // The page buffer are the pages that are not the current page
-    // that are being rendered anyways
-    pageBufferSize: number;
-
-    onY?: (x: number) => void;
-    onX?: (y: number) => void;
-    onPageNumber?: (n: number) => void;
-
-    // TODO: Test this ...
-    onPageChange?: (updates: PageUpdate) => void;
-
-    onPageRender?: (n: number) => void;
-    onPageCancel?: (n: number) => void;
-    onPageDestroy?: (n: number) => void;
-};
-
-const noPreviousArgument = Symbol();
-
-type FlushData = {
-    currentPage: number;
-    yUpdate: number;
-    xUpdate: number;
-};
-
-function createLastValueHolder<T>(): (cur: T) => typeof noPreviousArgument | T {
-    let prev: typeof noPreviousArgument | T = noPreviousArgument;
-    return (cur: T) => {
-        const oldPrev = prev;
-        prev = cur;
-        return oldPrev;
-    };
-}
-
 export default class PageManager {
-    readonly #pages: number;
+    #running: boolean;
+    #events: Array<Event>;
+
+    readonly #baseViewport: PageViewport;
+    readonly #viewport: PageViewport;
     readonly #hGap: number;
     readonly #vGap: number;
-    readonly #viewport: PageViewport;
-    readonly #baseViewport: PageViewport;
-    readonly #pageBufferSize: number;
+    readonly #pages: number;
     readonly renderQueues: ReadonlyArray<ReadonlyArray<number>>;
+    readonly #pageBufferSize: number;
 
-    #currentPage: number;
-    #yUpdate: number;
-    #xUpdate: number;
-
-    #current: {
-        render: number | null;
-        destroy: number | null;
-        cancel: number | null;
-    };
-
-    debugLog?: Array<any>;
-
-    #renderQueueIdx: number;
+    #outstandingRender: number | null;
+    #states: PageState[];
     #rendered: Set<number>;
+    #renderQueueIdx: number;
+    #currentPage: number;
+    #update: PartialUpdate | null;
+    onUpdate: (u: Update) => void;
 
-    #getLastFlush: (cur: FlushData) => typeof noPreviousArgument | FlushData;
-
-    // These callbacks are public so tests are easier
-    onPageChange: ((x: PageUpdate) => void | Promise<void>) & { wrapped?: true };
-
-    onPageNumber: (n: number) => void;
-    onX: (n: number) => void;
-    onY: (n: number) => void;
-
-    public renderFinished = (n: number) => {
-        const trace = this.#makeTrace({ entry: "renderFinished", n });
-        const { render } = this.#current;
-        if (typeof n === "number") {
-            if (n === this.#current.cancel && this.#current.render === null) {
-                trace.bounced = true;
-                return;
-            }
-            invariant(
-                render === n,
-                `expected outstanding render to be ${render} instead of ${n}`,
-            );
-        }
-        // if (typeof n === "number") {
-        // }
-        invariant(!this.#rendered.has(render!!), `render set already had: ${render}`);
-        this.#rendered.add(render!!);
-        this.#current.render = null;
-        this.#continueRender(null, trace);
-    };
-
-    #doOnPageRender(page: number, trace: Record<string, any>) {
-        invariant(this.#current.render === null, `current render was: ${this.#current.render}`);
-        this.#current.render = page;
-    }
-
-    public destroyFinished = (n: number) => {
-        this.#rendered.delete(n);
-        this.#cleanupHelper(n, "destroy");
-    };
-
-    #makeTrace({ entry, ...args }: Record<string, any>): Record<string, any> {
-        if (this.debugLog) {
-            const trace = { entry, ...args };
-            this.debugLog.push(trace);
-            return trace;
-        }
-        return {};
-    }
-
-    #cleanupHelper(n: number, type: "cancel" | "destroy") {
-        const trace = this.#makeTrace({ entry: `${type}Finished`, n });
-        const expected = this.#current[type];
-        invariant(expected === n, `expected ${type} to be: ${expected} instead of ${n}`);
-        this.#current[type] = null;
-        this.#continueRender(n, trace);
-    }
-
-    #doOnPageDestroy(page: number) {
-        const canDestroy = this.#current.destroy === null;
-        if (canDestroy) {
-            this.#current.destroy = page;
-        }
-        return canDestroy;
-    }
-
-    public cancelFinished = (n: number) => {
-        this.#cleanupHelper(n, "cancel");
-    };
-
-    #doOnPageCancel() {
-        const canCancel = !this.#current.cancel;
-        if (canCancel) {
-            invariant(this.#current.render !== null, `no existing render`);
-            this.#current.cancel = this.#current.render;
-            this.#current.render = null;
-        }
-        return canCancel;
-    }
-
-    constructor({
-        pages,
-        baseViewport,
-        onPageChange,
-        onPageNumber,
-        vGap,
-        hGap,
-        onX,
-        onY,
-        pageBufferSize,
-        renderQueues,
-        logInputs,
-    }: PageManagerOpts) {
+    constructor({ renderQueues, pageBufferSize, hGap, vGap, baseViewport, pages }: PageManagerOpts) {
         invariant(
             pageBufferSize % 2 === 1 && pageBufferSize > 0,
             `page buffer size must be positive & odd, got ${pageBufferSize}`,
         );
-
-        this.debugLog = logInputs ? [] : undefined;
-        this.renderQueues = renderQueues;
+        this.#events = [];
+        this.#running = false;
         this.#renderQueueIdx = -1;
-        this.#rendered = new Set();
-        this.#current = {
-            render: null,
-            destroy: null,
-            cancel: null,
-        };
         this.#currentPage = -1;
-
-        this.#pages = pages;
-        this.#baseViewport = baseViewport;
-        this.#viewport = this.#baseViewport.clone();
+        this.renderQueues = renderQueues;
+        this.#outstandingRender = null;
+        this.#pageBufferSize = pageBufferSize;
+        this.#update = null;
+        this.#rendered = new Set();
         this.#vGap = vGap;
         this.#hGap = hGap;
-        this.#getLastFlush = createLastValueHolder<FlushData>();
-        this.#yUpdate = -1;
-        this.#xUpdate = -1;
-        this.#pageBufferSize = pageBufferSize;
-
-        this.onPageChange = onPageChange || makeDoNotCallMe("onPageChange");
-        this.onPageNumber = onPageNumber || makeDoNotCallMe("onPageNumber");
-        this.onX = onX || makeDoNotCallMe("onX");
-        this.onY = onY || makeDoNotCallMe("onY");
-    }
-
-    #resetRenderState() {
-        this.#renderQueueIdx = 0;
-    }
-
-    public setY(y: number) {
-        const trace = this.#makeTrace({ entry: this.setY.name, y });
-        const height = this.height;
-        invariant(0 <= y && y <= this.height, `${y} > ${height}`);
-
-        const pageWithVGap = this.#pageHeight + this.#vGap;
-        const pagesOutOfScreen = Math.floor(y / pageWithVGap);
-        const remainingPixels = y % pageWithVGap;
-
-        this.#currentPage = 1
-            + pagesOutOfScreen
-            + (remainingPixels > this.#vGap + this.#pageHeight / 2 ? 1 : 0);
-
-        this.#flush(trace);
-    }
-
-    /** @param page starts from 1 */
-    goToPage(page: number) {
-        const trace = this.#makeTrace({ entry: this.goToPage.name, page });
-        this.#invariantValidPage(page);
-
-        // Example: If scroll to page 2 then we have scrolled by (2 - 1) pages and 2 vGaps
-        const startOfPageTop = this.#pageHeight * (page - 1) + this.#vGap * page;
-        // TODO: this hgap is broken, the pagemanager needs to take in total width
-        const startOfPageLeft = this.#hGap;
-
-        this.#yUpdate = startOfPageTop;
-        this.#xUpdate = startOfPageLeft;
-        this.#currentPage = page;
-
-        this.#flush(trace);
+        this.#baseViewport = baseViewport;
+        this.#viewport = baseViewport;
+        this.#pages = pages;
+        this.#states = fill(new Array(pages), PageState.NONE);
+        this.onUpdate = makeDoNotCallMe("onUpdate");
     }
 
     #evictPage() {
-        let toEvict = this.#current.render || null;
-        let minPriority = this.#current.render ? getPriority(this.#currentPage, this.#current.render) : null;
+        let toEvict = Number.isFinite(this.#outstandingRender) ? this.#outstandingRender : null;
+        let minPriority = Number.isFinite(this.#outstandingRender)
+            ? getPriority(this.#currentPage, this.#outstandingRender!!)
+            : null;
         for (const page of this.#rendered) {
             const priority = getPriority(this.#currentPage, page);
             // Lower numbers = higher priority
@@ -297,32 +152,11 @@ export default class PageManager {
                 toEvict = page;
             }
         }
-
         invariant(toEvict !== null, `no page to evict from page buffer`);
         return toEvict;
     }
 
-    #continueRender(none: number | null, trace: Record<string, any> = {}) {
-        trace.none = none;
-        trace.currentPage = this.#currentPage;
-        trace.startCurrent = clone(this.#current);
-
-        if (!this.onPageChange.wrapped) {
-            this.onPageChange.wrapped = true;
-            const og = this.onPageChange;
-            this.onPageChange = (...args: Parameters<typeof this.onPageChange>) => {
-                invariant(args.length === 1, `invalid args: ${JSON.stringify(args)}`);
-                trace.args = args[0];
-                trace.endCurrent = clone(this.#current);
-                const { none, page } = args[0];
-                if (none === page) args[0].none = null;
-                // if (typeof args[0].none === "number") {
-                //    invariant(args[0].none !== args[0].page, `page = none (${args[0].none})`);
-                // }
-                og(...args);
-            };
-        }
-
+    #continueRender(): { action: InternalType; page?: number } {
         const toRender = this.renderQueues[this.#currentPage - 1];
         while (this.#rendered.has(toRender[this.#renderQueueIdx]) && this.#renderQueueIdx < toRender.length) {
             this.#renderQueueIdx++;
@@ -330,85 +164,54 @@ export default class PageManager {
 
         // Case 1: We've rendered everything
         if (this.#renderQueueIdx === toRender.length) {
-            if (none !== null) this.onPageChange({ none });
-            else trace.noChange = true;
-            return;
+            return { action: InternalType.DONE };
         }
 
-        // Case 2: We can't render b/c there's no space
+        const pageToRender = toRender[this.#renderQueueIdx];
+        if (pageToRender === this.#outstandingRender) {
+            return { action: InternalType.BLOCKED_SELF, page: this.#outstandingRender };
+        }
+
         const pageBufferFull = this.#rendered.size === this.#pageBufferSize;
         const pageBufferAlmostFull =
-            (this.#rendered.size === this.#pageBufferSize - 1 && this.#current.render !== null);
+            (this.#rendered.size === this.#pageBufferSize - 1 && this.#outstandingRender !== null);
 
-        if (
-            pageBufferFull || pageBufferAlmostFull
-        ) {
+        if (pageBufferFull || pageBufferAlmostFull) {
+            // Case 2: We can't render b/c there's no space
             const toEvict = this.#evictPage();
-            const type = toEvict === this.#current.render ? "cancel" : "destroy";
-            let takeAction = false;
-            if (toEvict === this.#current.render) {
-                takeAction = this.#doOnPageCancel();
-            } else {
-                takeAction = this.#doOnPageDestroy(toEvict);
-            }
-            if (takeAction) {
-                this.onPageChange({ type, page: toEvict, none });
-            }
-            trace.pageBufferFull = pageBufferFull;
-            trace.pageBufferAlmostFull = pageBufferAlmostFull;
-            return;
+            return {
+                action: toEvict === this.#outstandingRender
+                    ? InternalType.CANCEL
+                    : InternalType.DESTROY,
+                page: toEvict,
+            };
         }
 
         // Case 3: We can render but a page is already rendering
         // and it's lower priority than us. Cancel it.
         if (
-            this.#current.render !== null && this.#renderQueueIdx < ALWAYS_RENDER
-            && this.#renderQueueIdx - getPriority(this.#currentPage, this.#current.render) > PRIORITY_GAP
+            this.#outstandingRender !== null && this.#renderQueueIdx < ALWAYS_RENDER
+            && this.#renderQueueIdx - getPriority(this.#currentPage, this.#outstandingRender) > PRIORITY_GAP
         ) {
-            this.#doOnPageCancel();
-            this.onPageChange({ type: "cancel", page: this.#current.render, none });
-            return;
+            return { action: InternalType.CANCEL, page: this.#outstandingRender };
         }
 
-        if (this.#current.render === null) {
-            // Case 4: We can render and there's no page blocking our way ...
-            const pageToRender = toRender[this.#renderQueueIdx];
-            this.#doOnPageRender(pageToRender, trace);
-            this.onPageChange({ type: "render", page: pageToRender, none });
-        } else {
-            trace.waitingForPage = this.#current.render;
-        }
-    }
-
-    #flush(trace: Record<string, any> = {}) {
-        const flush = {
-            currentPage: this.#currentPage,
-            yUpdate: this.#yUpdate,
-            xUpdate: this.#xUpdate,
-        };
-
-        const prevFlush = this.#getLastFlush(flush);
-        const noPrev = prevFlush === noPreviousArgument;
-        const newPage = noPrev || prevFlush.currentPage !== flush.currentPage;
-
-        if (noPrev || newPage) {
-            this.onPageNumber(flush.currentPage);
-
-            this.#resetRenderState();
-            this.#continueRender(null, trace);
-        }
-
-        if (flush.yUpdate !== -1 && (noPrev || flush.yUpdate !== prevFlush.yUpdate)) {
-            this.onY(flush.yUpdate);
-        }
-
-        if (flush.xUpdate !== -1 && (noPrev || flush.xUpdate !== prevFlush.xUpdate)) {
-            this.onX(flush.xUpdate);
-        }
+        return this.#outstandingRender === null
+            ? { action: InternalType.RENDER, page: pageToRender }
+            : { action: InternalType.BLOCKED_OTHER, page: this.#outstandingRender };
     }
 
     get #pageHeight() {
         return this.#viewport.height;
+    }
+
+    #goToPage(page: number) {
+        // Example: If scroll to page 2 then we have scrolled by (2 - 1) pages and 2 vGaps
+        const startOfPageTop = this.#pageHeight * (page - 1) + this.#vGap * page;
+        // TODO: this hgap is broken, the pagemanager needs to take in total width
+        const startOfPageLeft = this.#hGap;
+
+        return { x: startOfPageLeft, y: startOfPageTop };
     }
 
     get height() {
@@ -421,7 +224,180 @@ export default class PageManager {
         return this.#pages * (this.#pageHeight + this.#vGap) + this.#vGap;
     }
 
-    #invariantValidPage(page: number) {
+    #assertValidPage(page: number) {
         invariant(1 <= page && page <= this.#pages, `Invalid page: ${page}`);
+    }
+
+    cancelFinished = (page: number) => {
+        this.#assertValidPage(page);
+        this.#events.push({ type: EventType.CANCEL_FINISHED, page });
+    };
+
+    destroyFinished = (page: number) => {
+        this.#assertValidPage(page);
+        this.#events.push({ type: EventType.DESTROY_FINISHED, page });
+    };
+
+    renderFinished = (page: number) => {
+        this.#assertValidPage(page);
+        this.#events.push({ type: EventType.RENDER_FINISHED, page });
+    };
+
+    goToPage = (page: number) => {
+        this.#assertValidPage(page);
+        this.#events.push({ type: EventType.GO_TO_PAGE, page });
+    };
+
+    setY = (y: number) => {
+        const height = this.height;
+        invariant(0 <= y && y <= this.height, `${y} > ${height}`);
+        this.#events.push({ type: EventType.SET_Y, y });
+    };
+
+    #setY(y: number) {
+        const pageWithVGap = this.#pageHeight + this.#vGap;
+        const pagesOutOfScreen = Math.floor(y / pageWithVGap);
+        const remainingPixels = y % pageWithVGap;
+        return {
+            page: 1
+                + pagesOutOfScreen
+                + (remainingPixels > this.#vGap + this.#pageHeight / 2 ? 1 : 0),
+        };
+    }
+
+    #loop = () => {
+        let movementEvent: null | { event: Event; idx: number } = null;
+        let newUpdate: PartialUpdate = {};
+
+        if (this.#events.length === 0) {
+            if (!this.#running) return;
+            setTimeout(this.#loop);
+            return;
+        }
+
+        const oldStates = this.#states.slice();
+        const events = this.#events.slice();
+        console.log("EVENT: " + events.length);
+        this.#events = [];
+
+        let continueRender = false;
+        for (let i = 0; i < events.length; ++i) {
+            const event = events[i];
+            const { type } = event;
+            switch (type) {
+                case EventType.SET_Y:
+                case EventType.GO_TO_PAGE:
+                    movementEvent = { event, idx: i };
+                    break;
+                // case EventType.RESIZE:
+                //    break;
+                case EventType.RENDER_FINISHED:
+                case EventType.DESTROY_FINISHED:
+                case EventType.CANCEL_FINISHED:
+                    continueRender = true;
+                    const { page } = event;
+                    const idx = page - 1;
+                    const oldState = this.#states[idx];
+                    if (type === EventType.RENDER_FINISHED) {
+                        invariant(oldState === PageState.RENDER, `invalid state: ${oldState}`);
+                        this.#states[idx] = PageState.RENDER_DONE;
+                        this.#outstandingRender = null;
+                    } else if (type === EventType.DESTROY_FINISHED) {
+                        invariant(oldState === PageState.DESTROY, `invalid state: ${oldState}`);
+                        this.#states[idx] = PageState.NONE;
+                    } else if (type === EventType.CANCEL_FINISHED) {
+                        invariant(oldState === PageState.CANCEL, `invalid state: ${oldState}`);
+                        this.#states[idx] = PageState.NONE;
+                    } else invariant(false, `invalid event: ${type}`);
+                    break;
+            }
+        }
+
+        if (continueRender) {
+            this.#rendered = new Set(
+                this.#states
+                    .map((x, i) => x === PageState.RENDER_DONE ? i + 1 : null)
+                    .filter(i => i !== null),
+            ) as Set<number>;
+        }
+
+        if (movementEvent !== null) {
+            const { event } = movementEvent;
+            if (event.type === EventType.GO_TO_PAGE) {
+                const { page } = event;
+                const { x, y } = this.#goToPage(page);
+                newUpdate = { ...newUpdate, x, y, page };
+            } else {
+                invariant(event.type === EventType.SET_Y, `invalid type: ${event.type}`);
+                const { page } = this.#setY(event.y);
+                newUpdate = { ...newUpdate, page };
+            }
+            this.#currentPage = newUpdate.page!!;
+        }
+
+        const noPrev = this.#update === null;
+        const newPage = this.#update?.page !== newUpdate.page;
+        const resetRenderQueue = noPrev || newPage;
+
+        if (resetRenderQueue || continueRender) {
+            if (resetRenderQueue) {
+                this.#renderQueueIdx = 0;
+            }
+            const { action, page } = this.#continueRender();
+            if (
+                action !== InternalType.BLOCKED_OTHER
+                && action !== InternalType.BLOCKED_SELF
+                && action !== InternalType.DONE
+            ) {
+                invariant(typeof page === "number", `invalid page: ${page} for action: ${action}`);
+                newUpdate = { ...newUpdate, [action]: page };
+                const oldState = this.#states[page - 1];
+                if (action === InternalType.RENDER) {
+                    invariant(this.#outstandingRender === null, `existing render: ${this.#outstandingRender}`);
+                    invariant(oldState === PageState.NONE, `invalid state: ${oldState}`);
+                    this.#outstandingRender = page;
+                    this.#states[page - 1] = PageState.RENDER;
+                } else if (action === InternalType.DESTROY) {
+                    invariant(oldState === PageState.RENDER_DONE, `invalid state: ${oldState}`);
+                    this.#states[page - 1] = PageState.DESTROY;
+                } else if (action === InternalType.CANCEL) {
+                    invariant(oldState === PageState.RENDER, `invalid state: ${oldState}`);
+                }
+            }
+        }
+
+        let statesChanged = false;
+        for (let i = 0; i < oldStates.length; ++i) {
+            if (this.#states[i] !== PageState.RENDER_DONE && this.#states[i] !== oldStates[i]) {
+                statesChanged = true;
+            }
+        }
+
+        if (noPrev) this.onUpdate({ ...newUpdate, states: this.#states });
+        else {
+            const diffed: Update = {};
+            let notEmpty = false;
+            for (const [k, v] of Object.entries(newUpdate)) {
+                if (v !== this.#update!![k as keyof PartialUpdate]) {
+                    diffed[k as keyof PartialUpdate] = v;
+                    notEmpty = true;
+                }
+            }
+            if (statesChanged) diffed.states = this.#states;
+            if (notEmpty) this.onUpdate(diffed);
+        }
+
+        this.#update = newUpdate;
+        if (!this.#running) return;
+        setTimeout(this.#loop);
+    };
+
+    start() {
+        this.#running = true;
+        this.#loop();
+    }
+
+    stop() {
+        this.#running = false;
     }
 }
