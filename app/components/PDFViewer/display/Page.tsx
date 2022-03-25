@@ -1,8 +1,11 @@
 // TODO: Remove the invariants & just use if-stmts instead
+// TODO: Stop internal state from being a ref and just use useMemo
+// TODO: Implement zoom & search ...
 import type { PDFPageProxy } from "pdfjs-dist";
 import { RenderingCancelledException, renderTextLayer } from "pdfjs-dist";
 import { RenderParameters, RenderTask, TextContent } from "pdfjs-dist/types/src/display/api";
 import { PageViewport } from "pdfjs-dist/types/web/interfaces";
+import { memo } from "react";
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import invariant from "tiny-invariant";
@@ -18,7 +21,6 @@ type InternalState = typeof InternalState[keyof typeof InternalState];
 
 export const RenderState = {
     RENDER: "render",
-    CANCEL: "cancel",
     DESTROY: "destroy",
     NONE: "none",
 } as const;
@@ -27,7 +29,6 @@ export type RenderState = typeof RenderState[keyof typeof RenderState];
 type PageProps = {
     state: RenderState;
     renderFinished?: (n: number) => void;
-    cancelFinished?: (n: number) => void;
     destroyFinished?: (n: number) => void;
     page?: PDFPageProxy;
     pageNum: number;
@@ -38,15 +39,13 @@ type PageProps = {
 };
 
 function Page(
-    { state, page, pageNum, viewport, renderFinished, destroyFinished, cancelFinished, style = {} }: PageProps,
+    { state, page, pageNum, viewport, renderFinished, destroyFinished, style = {} }: PageProps,
 ) {
     const [textInfo, setTextInfo] = useState<{ html: string } | null>(null);
 
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const renderTaskRef = useRef<RenderTask | null>(null);
-    // const renderTextTaskRef = useRef<TextLayerRenderTask | null>(null)
     const internalStateRef = useRef<InternalState>(InternalState.CANVAS_NONE);
-    const cleanupRef = useRef<((n: number) => void) | undefined>(destroyFinished || cancelFinished);
     const { width, height } = viewport;
 
     const [canvasExists, setCanvasExists] = useState(false);
@@ -83,10 +82,11 @@ function Page(
             try {
                 await task.promise;
                 if (!cancel) {
-                    // TODO: Is this a memory leak?
-                    const rootElement = document.createElement("div");
+                    let rootElement: HTMLDivElement | null = document.createElement("div");
                     rootElement.appendChild(frag);
                     const text = rootElement.innerHTML;
+                    // TODO: Does this cause actual GC? Do we even need this line? Does it do anything?
+                    rootElement = null;
                     setTextInfo({ html: text });
                 }
             } catch (e) {
@@ -104,7 +104,7 @@ function Page(
         const { current: internal } = internalStateRef;
         const assertInvalid = () => invariant(false, `invalid: ${stateDescription}`);
 
-        console.log(`state change: ${stateDescription}`);
+        // console.log(`state change: ${stateDescription}`);
 
         switch (state) {
             case RenderState.NONE:
@@ -112,24 +112,6 @@ function Page(
                     case InternalState.CANVAS_DONE:
                     case InternalState.CANVAS_RENDERING:
                         assertInvalid();
-                }
-                break;
-            case RenderState.CANCEL:
-                switch (internal) {
-                    case InternalState.CANVAS_NONE:
-                    case InternalState.CANVAS_DONE:
-                        assertInvalid();
-                    case InternalState.CANVAS_RENDERING:
-                        const { current: renderTask } = renderTaskRef;
-                        // Sometimes, we go from Rendering -> Cancel before
-                        // the page even has a chance to *start* the render
-                        if (renderTask) {
-                            cleanupRef.current = cancelFinished;
-                            renderTask.cancel();
-                        } else {
-                            internalStateRef.current = InternalState.CANVAS_NONE;
-                            cancelFinished!!(pageNum);
-                        }
                 }
                 break;
             case RenderState.RENDER:
@@ -172,29 +154,20 @@ function Page(
             };
             const task = page!!.render(renderArgs);
             renderTaskRef.current = task;
+            console.time(`renderStart-${pageNum}`);
             task.promise
                 .then(() => {
+                    console.timeEnd(`renderStart-${pageNum}`);
                     internalStateRef.current = InternalState.CANVAS_DONE;
                     renderTaskRef.current = null;
                     invariant(renderFinished, `no render callback when render finished`);
                     renderFinished(pageNum);
                 })
                 .catch((e: unknown) => {
-                    console.log(`CANCELING: ${stateDescription}, ${(e as any).toString()}`);
-                    renderTaskRef.current = null;
-                    const isCancel = e instanceof RenderingCancelledException;
-                    deleteCanvas(isCancel ? InternalState.CANVAS_NONE : InternalState.ERROR);
-                    if (!isCancel) {
-                        console.log(`Error rendering for page: ${pageNum}`);
-                        console.error(e);
-                        internalStateRef.current = InternalState.ERROR;
-                        setError(true);
-                    } else {
-                        invariant(cleanupRef.current, `invalid cleanup`);
-                        // If we don't use a ref then the closure doesn't capture the latest
-                        // value of `cleanupFinished` leading to function is undefined errors
-                        cleanupRef.current(pageNum);
-                    }
+                    console.log(`Error rendering for page: ${pageNum}`);
+                    console.error(e);
+                    internalStateRef.current = InternalState.ERROR;
+                    setError(true);
                 });
         }
         // TODO: Probably need to do viewport stuff for resize
@@ -234,4 +207,5 @@ function Page(
         );
 }
 
+// export default memo(Page);
 export default Page;

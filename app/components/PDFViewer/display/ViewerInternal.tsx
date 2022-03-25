@@ -14,6 +14,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
 
 // TODO: replace this params
 const PAGE_BUFFER_SIZE = 5;
+const MAX_SCALE_FACTOR = 4;
 
 // This can't be a prop b/c
 // we would need to call a method on the page manager to
@@ -167,9 +168,6 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
                         state={state}
                         {...(state === RenderState.RENDER && {
                             renderFinished: pm.renderFinished,
-                        })}
-                        {...((state === RenderState.CANCEL) && {
-                            cancelFinished: pm.cancelFinished,
                         })}
                         {...((state === RenderState.DESTROY) && {
                             destroyFinished: pm.destroyFinished,

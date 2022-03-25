@@ -3,15 +3,11 @@ import { PageViewport } from "pdfjs-dist";
 import invariant from "tiny-invariant";
 import { makeDoNotCallMe } from "./helpers";
 
-const ALWAYS_RENDER = 3;
-const PRIORITY_GAP = 2;
-
 const EventType = {
     GO_TO_PAGE: "go_to_page",
     SET_Y: "set_y",
     RESIZE: "resize",
     RENDER_FINISHED: "render_finished",
-    CANCEL_FINISHED: "cancel_finished",
     DESTROY_FINISHED: "destroy_finished",
 } as const;
 type EventType = typeof EventType[keyof typeof EventType];
@@ -20,7 +16,7 @@ type Event =
     | { type: (typeof EventType.SET_Y); y: number }
     | { type: (typeof EventType.GO_TO_PAGE); page: number }
     | ({
-        type: (typeof EventType.RENDER_FINISHED | typeof EventType.CANCEL_FINISHED | typeof EventType.DESTROY_FINISHED);
+        type: (typeof EventType.RENDER_FINISHED | typeof EventType.DESTROY_FINISHED);
     } & { page: number });
 
 // This enum should be kept in sync w/ the stuff in Page.tsx
@@ -28,7 +24,6 @@ export const PageState = {
     NONE: "none",
     RENDER: "render",
     RENDER_DONE: "rendered",
-    CANCEL: "cancel",
     DESTROY: "destroy",
 } as const;
 export type PageState = typeof PageState[keyof typeof PageState];
@@ -38,7 +33,6 @@ const InternalType = {
     BLOCKED_SELF: "blocked_self",
     BLOCKED_OTHER: "blocked_other",
     RENDER: "render",
-    CANCEL: "cancel",
     DESTROY: "destroy",
 } as const;
 type InternalType = typeof InternalType[keyof typeof InternalType];
@@ -140,10 +134,8 @@ export default class PageManager {
     }
 
     #evictPage() {
-        let toEvict = Number.isFinite(this.#outstandingRender) ? this.#outstandingRender : null;
-        let minPriority = Number.isFinite(this.#outstandingRender)
-            ? getPriority(this.#currentPage, this.#outstandingRender!!)
-            : null;
+        let toEvict = null;
+        let minPriority = null;
         for (const page of this.#rendered) {
             const priority = getPriority(this.#currentPage, page);
             // Lower numbers = higher priority
@@ -180,20 +172,9 @@ export default class PageManager {
             // Case 2: We can't render b/c there's no space
             const toEvict = this.#evictPage();
             return {
-                action: toEvict === this.#outstandingRender
-                    ? InternalType.CANCEL
-                    : InternalType.DESTROY,
+                action: InternalType.DESTROY,
                 page: toEvict,
             };
-        }
-
-        // Case 3: We can render but a page is already rendering
-        // and it's lower priority than us. Cancel it.
-        if (
-            this.#outstandingRender !== null && this.#renderQueueIdx < ALWAYS_RENDER
-            && this.#renderQueueIdx - getPriority(this.#currentPage, this.#outstandingRender) > PRIORITY_GAP
-        ) {
-            return { action: InternalType.CANCEL, page: this.#outstandingRender };
         }
 
         return this.#outstandingRender === null
@@ -227,11 +208,6 @@ export default class PageManager {
     #assertValidPage(page: number) {
         invariant(1 <= page && page <= this.#pages, `Invalid page: ${page}`);
     }
-
-    cancelFinished = (page: number) => {
-        this.#assertValidPage(page);
-        this.#events.push({ type: EventType.CANCEL_FINISHED, page });
-    };
 
     destroyFinished = (page: number) => {
         this.#assertValidPage(page);
@@ -277,7 +253,6 @@ export default class PageManager {
 
         const oldStates = this.#states.slice();
         const events = this.#events.slice();
-        console.log("EVENT: " + events.length);
         this.#events = [];
 
         let continueRender = false;
@@ -293,7 +268,6 @@ export default class PageManager {
                 //    break;
                 case EventType.RENDER_FINISHED:
                 case EventType.DESTROY_FINISHED:
-                case EventType.CANCEL_FINISHED:
                     continueRender = true;
                     const { page } = event;
                     const idx = page - 1;
@@ -304,9 +278,6 @@ export default class PageManager {
                         this.#outstandingRender = null;
                     } else if (type === EventType.DESTROY_FINISHED) {
                         invariant(oldState === PageState.DESTROY, `invalid state: ${oldState}`);
-                        this.#states[idx] = PageState.NONE;
-                    } else if (type === EventType.CANCEL_FINISHED) {
-                        invariant(oldState === PageState.CANCEL, `invalid state: ${oldState}`);
                         this.#states[idx] = PageState.NONE;
                     } else invariant(false, `invalid event: ${type}`);
                     break;
@@ -360,8 +331,8 @@ export default class PageManager {
                 } else if (action === InternalType.DESTROY) {
                     invariant(oldState === PageState.RENDER_DONE, `invalid state: ${oldState}`);
                     this.#states[page - 1] = PageState.DESTROY;
-                } else if (action === InternalType.CANCEL) {
-                    invariant(oldState === PageState.RENDER, `invalid state: ${oldState}`);
+                } else {
+                    invariant(false, `invalid action: ${action}`);
                 }
             }
         }
