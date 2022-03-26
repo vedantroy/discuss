@@ -10,11 +10,11 @@ import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import invariant from "tiny-invariant";
 import gif from "./loading-icon.gif";
-import { PageState } from "../controller/PageManager";
 
 const InternalState = {
     CANVAS_NONE: "canvas_none",
     CANVAS_RENDERING: "canvas_rendering",
+    CANVAS_RERENDERING: "canvas_rerendering",
     CANVAS_DONE: "canvas_done",
     ERROR: "error",
 };
@@ -41,14 +41,14 @@ type PageProps = {
 };
 
 function renderGraphics(
-    { canvasRef, viewport, page, renderTaskRef, internalStateRef, outstandingRender, pageNum, renderFinished }: {
+    { canvasRef, viewport, page, renderTaskRef, outstandingRender, pageNum, renderFinished, setInternalState }: {
         pageNum: number;
         renderFinished: ((n: number) => void) | undefined;
         page: PDFPageProxy;
         canvasRef: React.MutableRefObject<HTMLCanvasElement | null>;
         renderTaskRef: React.MutableRefObject<RenderTask | null>;
         outstandingRender: number | null;
-        internalStateRef: React.MutableRefObject<InternalState>;
+        setInternalState: any;
         viewport: PageViewport;
     },
 ) {
@@ -56,6 +56,8 @@ function renderGraphics(
     invariant(canvas, `invalid canvas`);
     const ctx = canvas.getContext("2d");
     invariant(ctx, `invalid canvas context`);
+    // ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // ctx.beginPath();
 
     const renderArgs: RenderParameters = {
         canvasContext: ctx,
@@ -65,8 +67,9 @@ function renderGraphics(
     renderTaskRef.current = task;
     task.promise
         .then(() => {
-            internalStateRef.current = InternalState.CANVAS_DONE;
+            // renderTaskRef.current!!.cancel()
             renderTaskRef.current = null;
+            setInternalState(InternalState.CANVAS_DONE);
             if (pageNum === outstandingRender) {
                 console.log(`${pageNum}: render callback`);
                 invariant(renderFinished, `no render callback when render finished`);
@@ -78,11 +81,11 @@ function renderGraphics(
         .catch((e: unknown) => {
             const isCancel = e instanceof RenderingCancelledException;
             if (!isCancel) {
-                internalStateRef.current = InternalState.ERROR;
+                setInternalState(InternalState.ERROR);
                 console.log("ERROR: " + pageNum);
                 console.log(e);
             } else {
-                console.log(`${pageNum}: cancel`)
+                console.log(`${pageNum}: cancel`);
             }
         });
 }
@@ -92,18 +95,15 @@ function Page(
 ) {
     const [textInfo, setTextInfo] = useState<{ html: string } | null>(null);
 
-    const textContent = useRef<TextContent | null>(null)
-    const textContentPromise = useRef<{ p: Promise<TextContent> | null }>({ p: null })
+    const textContent = useRef<TextContent | null>(null);
+    const textContentPromise = useRef<{ p: Promise<TextContent> | null }>({ p: null });
 
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
-    const notifyRef = useRef<boolean>(false);
     const renderTaskRef = useRef<RenderTask>(null);
-    const internalStateRef = useRef<InternalState>(InternalState.CANVAS_NONE);
+    const [internalState, setInternalState] = useState<InternalState>(InternalState.CANVAS_NONE);
     const { width, height } = viewport;
 
-    const [canvasExists, setCanvasExists] = useState(false);
-    const [error, setError] = useState(false);
-    const stateDescription = `(internal=${internalStateRef.current}, render=${state}, page=${pageNum})`;
+    const stateDescription = `(internal=${internalState}, render=${state}, page=${pageNum})`;
 
     function deleteCanvas(state: InternalState) {
         const { current: canvas } = canvasRef;
@@ -116,22 +116,21 @@ function Page(
         // reducing memory consumption
         canvas.width = 0;
         canvas.height = 0;
-        internalStateRef.current = state;
-        setCanvasExists(false);
+        setInternalState(state);
     }
 
     useEffect(() => {
         let cancel = false;
         if (page === undefined) return;
         if (textContentPromise.current.p === null) {
-            textContentPromise.current = { p: page.getTextContent() }
+            textContentPromise.current = { p: page.getTextContent() };
         }
 
         async function go() {
-            if (state !== RenderState.RENDER) return
+            if (state !== RenderState.RENDER) return;
             const frag = document.createDocumentFragment();
             if (textContent.current === null) {
-                textContent.current = await textContentPromise.current.p
+                textContent.current = await textContentPromise.current.p;
             }
             if (cancel) return;
             const task = renderTextLayer({
@@ -162,7 +161,7 @@ function Page(
     }, [page, width, height, state]);
 
     useEffect(() => {
-        const { current: internal } = internalStateRef;
+        const internal = internalState;
         const assertInvalid = () => invariant(false, `invalid: ${stateDescription}`);
 
         switch (state) {
@@ -170,18 +169,22 @@ function Page(
                 switch (internal) {
                     case InternalState.CANVAS_DONE:
                     case InternalState.CANVAS_RENDERING:
+                    case InternalState.CANVAS_RENDERING:
                         assertInvalid();
                 }
                 break;
             case RenderState.RENDER:
                 switch (internal) {
                     case InternalState.CANVAS_DONE:
+                    case InternalState.CANVAS_RERENDERING:
                     case InternalState.CANVAS_RENDERING:
-                        internalStateRef.current = InternalState.CANVAS_RENDERING;
+                        console.log(`${pageNum}: Resize pathway ...`);
+                        setInternalState(InternalState.CANVAS_RERENDERING);
                         console.log(`${pageNum}: re-render b/c of viewport change`);
                         if (renderTaskRef.current) {
+                            console.log("cancel");
                             renderTaskRef.current.cancel();
-                        }
+                        } else console.log("no cancel");
                         invariant(canvasRef.current, `no canvas`);
                         canvasRef.current.width = width;
                         canvasRef.current.height = height;
@@ -191,22 +194,21 @@ function Page(
                             renderFinished,
                             renderTaskRef,
                             pageNum,
-                            internalStateRef,
+                            setInternalState,
                             outstandingRender,
                             page: page!!,
                         });
                         break;
                     case InternalState.CANVAS_NONE:
                         console.log(`${pageNum}: Starting 1st render since load`);
-                        internalStateRef.current = InternalState.CANVAS_RENDERING;
-                        notifyRef.current = false;
-                        setCanvasExists(true);
+                        setInternalState(InternalState.CANVAS_RENDERING);
                 }
                 break;
             case RenderState.DESTROY:
                 switch (internal) {
                     case InternalState.CANVAS_NONE:
                         break;
+                    case InternalState.CANVAS_RERENDERING:
                     case InternalState.CANVAS_RENDERING:
                         // This can happen if we are resizing (thus re-rendering)
                         // but @ the same time need to destroy the page
@@ -216,7 +218,7 @@ function Page(
                     case InternalState.CANVAS_DONE:
                         invariant(destroyFinished, `Invalid cleanup callback: ${stateDescription}`);
                         deleteCanvas(InternalState.CANVAS_NONE);
-                        console.log(`${pageNum}: notifying destroy`)
+                        console.log(`${pageNum}: notifying destroy`);
                         destroyFinished(pageNum);
                 }
                 break;
@@ -226,26 +228,32 @@ function Page(
     }, [state, viewport.width, viewport.height]);
 
     useEffect(() => {
-        const { current: internal } = internalStateRef;
-        if (canvasExists && internal === InternalState.CANVAS_RENDERING) {
+        if (internalState === InternalState.CANVAS_RENDERING) {
             renderGraphics({
                 canvasRef,
                 viewport,
                 renderFinished,
                 renderTaskRef,
                 pageNum,
-                internalStateRef,
+                setInternalState,
                 outstandingRender,
                 page: page!!,
             });
         }
-        // TODO: Probably need to do viewport stuff for resize
-    }, [canvasExists]);
+    }, [internalState === InternalState.CANVAS_RENDERING]);
 
     const styles = { ...style, width, height };
-    return canvasExists
+    // Seems like Tailwind CSS wasn't working for these
+    const loadingStyles = {
+        background: `url(${gif})`,
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+        backgroundColor: "white",
+    };
+    return (internalState === InternalState.CANVAS_RENDERING || internalState === InternalState.CANVAS_DONE
+            || internalState === InternalState.CANVAS_RERENDERING)
         ? (
-            <div data-page={pageNum} className="shadow relative" style={{...styles, width, height }}>
+            <div data-page={pageNum} className="shadow relative" style={{ ...styles, width, height }}>
                 <canvas ref={canvasRef} width={width} height={height} />
                 {textInfo
                     ? (
@@ -257,6 +265,16 @@ function Page(
                         </div>
                     )
                     : null}
+                <div
+                    className="inset-0 absolute"
+                    style={{
+                        width,
+                        height,
+                        zIndex: internalState === InternalState.CANVAS_DONE ? -1 : 1,
+                        ...loadingStyles,
+                    }}
+                >
+                </div>
             </div>
         )
         : (
@@ -264,15 +282,12 @@ function Page(
                 data-page={pageNum}
                 // Tailwind CSS was not working for the background color
                 style={{
-                    background: `url(${gif})`,
-                    backgroundPosition: "center",
-                    backgroundRepeat: "no-repeat",
-                    backgroundColor: "white",
+                    ...loadingStyles,
                     ...styles,
                 }}
                 className="shadow"
             >
-                {error ? "error" : ""}
+                {internalState === InternalState.ERROR ? "error" : ""}
             </div>
         );
 }
