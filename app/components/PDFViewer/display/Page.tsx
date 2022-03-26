@@ -5,7 +5,7 @@ import type { PDFPageProxy } from "pdfjs-dist";
 import { RenderingCancelledException, renderTextLayer } from "pdfjs-dist";
 import { RenderParameters, RenderTask, TextContent } from "pdfjs-dist/types/src/display/api";
 import { PageViewport } from "pdfjs-dist/types/web/interfaces";
-import { memo } from "react";
+import React, { memo } from "react";
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import invariant from "tiny-invariant";
@@ -34,16 +34,60 @@ type PageProps = {
     pageNum: number;
     viewport: PageViewport;
     style?: CSSProperties;
+    outstandingRender: number | null;
     // TODO: remove
     // className?: string;
 };
 
+function renderGraphics(
+    { canvasRef, viewport, page, renderTaskRef, internalStateRef, outstandingRender, pageNum, renderFinished }: {
+        pageNum: number;
+        renderFinished: ((n: number) => void) | undefined;
+        page: PDFPageProxy;
+        canvasRef: React.MutableRefObject<HTMLCanvasElement | null>;
+        renderTaskRef: React.MutableRefObject<RenderTask | null>;
+        outstandingRender: number | null;
+        internalStateRef: React.MutableRefObject<InternalState>;
+        viewport: PageViewport;
+    },
+) {
+    const { current: canvas } = canvasRef;
+    invariant(canvas, `invalid canvas`);
+    const ctx = canvas.getContext("2d");
+    invariant(ctx, `invalid canvas context`);
+
+    const renderArgs: RenderParameters = {
+        canvasContext: ctx,
+        viewport,
+    };
+    const task = page.render(renderArgs);
+    renderTaskRef.current = task;
+    task.promise
+        .then(() => {
+            internalStateRef.current = InternalState.CANVAS_DONE;
+            renderTaskRef.current = null;
+            if (pageNum === outstandingRender) {
+                console.log(`${pageNum}: render callback`);
+                invariant(renderFinished, `no render callback when render finished`);
+                renderFinished(pageNum);
+            } else {
+                console.log(`skipping b/c ${pageNum} !== ${outstandingRender}`);
+            }
+        })
+        .catch((e: unknown) => {
+            internalStateRef.current = InternalState.ERROR;
+            console.log("ERROR: " + pageNum);
+            console.log(e);
+        });
+}
+
 function Page(
-    { state, page, pageNum, viewport, renderFinished, destroyFinished, style = {} }: PageProps,
+    { state, page, pageNum, viewport, renderFinished, outstandingRender, destroyFinished, style = {} }: PageProps,
 ) {
     const [textInfo, setTextInfo] = useState<{ html: string } | null>(null);
 
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    const notifyRef = useRef<boolean>(false);
     const renderTaskRef = useRef<RenderTask | null>(null);
     const internalStateRef = useRef<InternalState>(InternalState.CANVAS_NONE);
     const { width, height } = viewport;
@@ -98,13 +142,11 @@ function Page(
         return () => {
             cancel = true;
         };
-    }, [page, viewport.width, viewport.height]);
+    }, [page, width, height]);
 
     useEffect(() => {
         const { current: internal } = internalStateRef;
         const assertInvalid = () => invariant(false, `invalid: ${stateDescription}`);
-
-        // console.log(`state change: ${stateDescription}`);
 
         switch (state) {
             case RenderState.NONE:
@@ -118,57 +160,67 @@ function Page(
                 switch (internal) {
                     case InternalState.CANVAS_DONE:
                     case InternalState.CANVAS_RENDERING:
-                        assertInvalid();
-                    case InternalState.CANVAS_NONE:
                         internalStateRef.current = InternalState.CANVAS_RENDERING;
+                        console.log(`${pageNum}: doing re-render b/c of viewport change`);
+                        if (renderTaskRef.current) {
+                            renderTaskRef.current.cancel();
+                        }
+                        invariant(canvasRef.current, `no canvas`);
+                        canvasRef.current.width = width;
+                        canvasRef.current.height = height;
+                        renderGraphics({
+                            canvasRef,
+                            viewport,
+                            renderFinished,
+                            renderTaskRef,
+                            pageNum,
+                            internalStateRef,
+                            outstandingRender,
+                            page: page!!,
+                        });
+                        break;
+                    case InternalState.CANVAS_NONE:
+                        console.log(`${pageNum}: Starting 1st render since load`);
+                        internalStateRef.current = InternalState.CANVAS_RENDERING;
+                        notifyRef.current = false;
                         setCanvasExists(true);
                 }
                 break;
             case RenderState.DESTROY:
                 switch (internal) {
                     case InternalState.CANVAS_NONE:
+                        break;
                     case InternalState.CANVAS_RENDERING:
-                        assertInvalid();
+                        // This can happen if we are resizing (thus re-rendering)
+                        // but @ the same time need to destroy the page
+                        if (renderTaskRef.current) {
+                            renderTaskRef.current.cancel();
+                        }
                     case InternalState.CANVAS_DONE:
                         invariant(destroyFinished, `Invalid cleanup callback: ${stateDescription}`);
                         deleteCanvas(InternalState.CANVAS_NONE);
+                        notifyRef.current = false;
                         destroyFinished(pageNum);
                 }
                 break;
             default:
                 invariant(false, `invalid render state: ${state}`);
         }
-    }, [state]);
+    }, [state, viewport.width, viewport.height]);
 
     useEffect(() => {
         const { current: internal } = internalStateRef;
         if (canvasExists && internal === InternalState.CANVAS_RENDERING) {
-            const { current: canvas } = canvasRef;
-            invariant(canvas, `no canvas even when canvasExists=${canvasExists}`);
-            const ctx = canvas.getContext("2d");
-            invariant(ctx, `invalid canvas context`);
-
-            const renderArgs: RenderParameters = {
-                canvasContext: ctx,
+            renderGraphics({
+                canvasRef,
                 viewport,
-            };
-            const task = page!!.render(renderArgs);
-            renderTaskRef.current = task;
-            console.time(`renderStart-${pageNum}`);
-            task.promise
-                .then(() => {
-                    console.timeEnd(`renderStart-${pageNum}`);
-                    internalStateRef.current = InternalState.CANVAS_DONE;
-                    renderTaskRef.current = null;
-                    invariant(renderFinished, `no render callback when render finished`);
-                    renderFinished(pageNum);
-                })
-                .catch((e: unknown) => {
-                    console.log(`Error rendering for page: ${pageNum}`);
-                    console.error(e);
-                    internalStateRef.current = InternalState.ERROR;
-                    setError(true);
-                });
+                renderFinished,
+                renderTaskRef,
+                pageNum,
+                internalStateRef,
+                outstandingRender,
+                page: page!!,
+            });
         }
         // TODO: Probably need to do viewport stuff for resize
     }, [canvasExists]);

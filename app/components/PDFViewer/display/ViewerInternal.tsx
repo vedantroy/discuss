@@ -47,6 +47,7 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
     const [currentPage, setCurrentPage] = useState<number>(firstPage);
     const [pageStates, setPageStates] = useState<RenderState[]>(fill(new Array(doc.numPages), RenderState.NONE));
 
+    const zoomRef = useRef<number>(1.0);
     const queuedScrollYRef = useRef<number | null>(null);
     const { current: pageToPromise } = useRef<Record<number, Promise<number>>>({});
     // We don't store text content here (although that would make design simpler)
@@ -54,14 +55,15 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
     const { current: pages } = useRef<Array<{ proxy: PDFPageProxy } | undefined>>(
         fill(new Array(doc.numPages), undefined),
     );
-    const pageViewportRef = useRef<PageViewport | null>(null);
+    const [outstandingRender, setOutstandingRender] = useState<number | null>(null);
+    const [viewport, setViewport] = useState<PageViewport | null>(null);
     const pageManagerRef = useRef<PageManager | null>(null);
     const pageContainerRef = useRef<HTMLDivElement | null>(null);
 
     const { current: pm } = pageManagerRef;
     // fake is used for debug purposes
     const validPm = pm || { fake: true } as unknown as PageManager;
-    validPm.onUpdate = useCallback(async ({ x, y, states, page }) => {
+    validPm.onUpdate = useCallback(async ({ x, y, states, page, viewport, outstandingRender }) => {
         if (!allPagesLoaded && states) {
             const idxs = states
                 .map((x, i) => x === PageState.RENDER ? i : null)
@@ -72,8 +74,15 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
                 invariant(pages[idx], `still loading page: ${idx + 1}`);
             }
         }
+        if (outstandingRender !== undefined) setOutstandingRender(outstandingRender);
         if (isNum(page)) setCurrentPage(page);
         if (isNum(y)) queuedScrollYRef.current = y;
+        if (viewport) setViewport(viewport);
+        if (viewport) {
+            console.log("vp change");
+            console.log(viewport);
+            console.log(viewport.width);
+        }
         if (Array.isArray(states)) {
             setPageStates(states.map(x => x === PageState.RENDER_DONE ? RenderState.RENDER : x));
         }
@@ -95,7 +104,6 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
 
     useEffect(() => {
         const initializePages = async () => {
-            console.time("firstRender");
             const renderQueues = makeRenderQueues(doc.numPages, PAGE_BUFFER_SIZE - 1);
 
             const firstRenderQueue = renderQueues[firstPage - 1];
@@ -127,8 +135,8 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
             const promises = Object.values(pageToPromise);
             const firstPageLoadedNum = await Promise.race(promises);
             const firstPageLoaded = pages[firstPageLoadedNum - 1];
-            const viewport = firstPageLoaded!!.proxy.getViewport({ scale: 1.0 });
-            pageViewportRef.current = viewport;
+            const viewport = firstPageLoaded!!.proxy.getViewport({ scale: zoomRef.current!! });
+            setViewport(viewport);
 
             const pm = new PageManager({
                 renderQueues,
@@ -152,6 +160,7 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
         () => {
             // Pages are only displayed if the page manager exists ...
             if (!pm) return [];
+            console.log(outstandingRender);
 
             return pageStates.map((state, idx) => {
                 const style = {
@@ -162,8 +171,9 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
                     <Page
                         style={style}
                         key={idx}
-                        viewport={pageViewportRef.current!!}
+                        viewport={viewport!!}
                         pageNum={idx + 1}
+                        outstandingRender={outstandingRender}
                         page={pages[idx]?.proxy}
                         state={state}
                         {...(state === RenderState.RENDER && {
@@ -176,7 +186,7 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
                 );
             });
         },
-        [pageStates],
+        [pageStates, viewport, outstandingRender],
     );
 
     return pm
@@ -185,7 +195,28 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
                 style={{ height }}
                 className="flex flex-col overflow-hidden bg-zinc-200"
             >
-                <div className="h-8">current page: {currentPage}</div>
+                <div className="flex flex-row">
+                    <div className="h-8">{outstandingRender ? "loading" : "done"}</div>
+                    <div className="h-8">current page: {currentPage}</div>
+                    <button
+                        className="h-8"
+                        onClick={() => {
+                            zoomRef.current -= 0.1;
+                            pm.setZoom(zoomRef.current);
+                        }}
+                    >
+                        - zoom
+                    </button>
+                    <button
+                        className="h-8"
+                        onClick={() => {
+                            zoomRef.current += 0.1;
+                            pm.setZoom(zoomRef.current);
+                        }}
+                    >
+                        + zoom
+                    </button>
+                </div>
                 <div
                     ref={pageContainerRef}
                     onScroll={e => {

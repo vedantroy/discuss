@@ -1,4 +1,4 @@
-import { fill } from "lodash";
+import { fill, times } from "lodash";
 import { PageViewport } from "pdfjs-dist";
 import invariant from "tiny-invariant";
 import { makeDoNotCallMe } from "./helpers";
@@ -6,7 +6,7 @@ import { makeDoNotCallMe } from "./helpers";
 const EventType = {
     GO_TO_PAGE: "go_to_page",
     SET_Y: "set_y",
-    RESIZE: "resize",
+    ZOOM: "zoom",
     RENDER_FINISHED: "render_finished",
     DESTROY_FINISHED: "destroy_finished",
 } as const;
@@ -15,6 +15,7 @@ type EventType = typeof EventType[keyof typeof EventType];
 type Event =
     | { type: (typeof EventType.SET_Y); y: number }
     | { type: (typeof EventType.GO_TO_PAGE); page: number }
+    | { type: (typeof EventType.ZOOM); scale: number }
     | ({
         type: (typeof EventType.RENDER_FINISHED | typeof EventType.DESTROY_FINISHED);
     } & { page: number });
@@ -53,6 +54,8 @@ type Update = {
     y?: number;
     states?: PageState[];
     page?: number;
+    viewport?: PageViewport;
+    outstandingRender?: number | null;
 };
 
 function getPriority(currentPage: number, page: number) {
@@ -93,9 +96,9 @@ export function makeRenderQueues(pages: number, pageBufferSize: number): Readonl
 export default class PageManager {
     #running: boolean;
     #events: Array<Event>;
+    #viewport: PageViewport;
 
     readonly #baseViewport: PageViewport;
-    readonly #viewport: PageViewport;
     readonly #hGap: number;
     readonly #vGap: number;
     readonly #pages: number;
@@ -224,6 +227,10 @@ export default class PageManager {
         this.#events.push({ type: EventType.GO_TO_PAGE, page });
     };
 
+    setZoom = (scale: number) => {
+        this.#events.push({ type: EventType.ZOOM, scale });
+    };
+
     setY = (y: number) => {
         const height = this.height;
         invariant(0 <= y && y <= this.height, `${y} > ${height}`);
@@ -242,7 +249,15 @@ export default class PageManager {
     }
 
     #loop = () => {
+        if (this.#outstandingRender === null) {
+            invariant(
+                this.#states.filter(x => x === PageState.RENDER).length === 0,
+                `pages need rendering while outstanding render is null`,
+            );
+        }
+
         let movementEvent: null | { event: Event; idx: number } = null;
+        let zoomEvent: null | { scale: number; idx: number } = null;
         let newUpdate: PartialUpdate = {};
 
         if (this.#events.length === 0) {
@@ -264,32 +279,45 @@ export default class PageManager {
                 case EventType.GO_TO_PAGE:
                     movementEvent = { event, idx: i };
                     break;
-                // case EventType.RESIZE:
-                //    break;
+                case EventType.ZOOM:
+                    zoomEvent = { idx: i, scale: event.scale };
+                    break;
                 case EventType.RENDER_FINISHED:
                 case EventType.DESTROY_FINISHED:
                     continueRender = true;
                     const { page } = event;
                     const idx = page - 1;
                     const oldState = this.#states[idx];
+                    const msg = `invalid (state=${oldState},page=${page})`;
                     if (type === EventType.RENDER_FINISHED) {
-                        invariant(oldState === PageState.RENDER, `invalid state: ${oldState}`);
+                        invariant(oldState === PageState.RENDER, msg);
                         this.#states[idx] = PageState.RENDER_DONE;
                         this.#outstandingRender = null;
                     } else if (type === EventType.DESTROY_FINISHED) {
-                        invariant(oldState === PageState.DESTROY, `invalid state: ${oldState}`);
+                        invariant(oldState === PageState.DESTROY, msg);
                         this.#states[idx] = PageState.NONE;
                     } else invariant(false, `invalid event: ${type}`);
                     break;
             }
         }
 
-        if (continueRender) {
-            this.#rendered = new Set(
-                this.#states
-                    .map((x, i) => x === PageState.RENDER_DONE ? i + 1 : null)
-                    .filter(i => i !== null),
-            ) as Set<number>;
+        this.#rendered = new Set(
+            this.#states
+                .map((x, i) => x === PageState.RENDER_DONE ? i + 1 : null)
+                .filter(i => i !== null),
+        ) as Set<number>;
+
+        if (zoomEvent !== null) {
+            console.log(zoomEvent.idx, movementEvent?.idx);
+            const { scale } = zoomEvent;
+            const newVp = this.#baseViewport.clone({ scale });
+            const { width, height } = this.#viewport;
+            if (newVp.width !== width || newVp.height !== height) {
+                this.#viewport = newVp;
+                // We need to update all internal / mutable state
+                // for methods like `this.#goToPage` to work correctly
+                newUpdate = { ...newUpdate, viewport: this.#viewport };
+            }
         }
 
         if (movementEvent !== null) {
@@ -323,13 +351,26 @@ export default class PageManager {
                 invariant(typeof page === "number", `invalid page: ${page} for action: ${action}`);
                 newUpdate = { ...newUpdate, [action]: page };
                 const oldState = this.#states[page - 1];
+
+                // TODO: Replace this function w/ chiller error handling
+                const msg = `${page} - invalid (state=${oldState},action=${action}) `;
+                const err = (exp: PageState) => {
+                    const succ = oldState === exp;
+                    if (!succ) {
+                        console.log(`INVALID STATES:`);
+                        console.log(this.#states);
+                        invariant(false, msg);
+                    }
+                };
                 if (action === InternalType.RENDER) {
                     invariant(this.#outstandingRender === null, `existing render: ${this.#outstandingRender}`);
-                    invariant(oldState === PageState.NONE, `invalid state: ${oldState}`);
+                    err(PageState.NONE);
+                    // invariant(oldState === PageState.NONE, msg);
                     this.#outstandingRender = page;
                     this.#states[page - 1] = PageState.RENDER;
                 } else if (action === InternalType.DESTROY) {
-                    invariant(oldState === PageState.RENDER_DONE, `invalid state: ${oldState}`);
+                    // invariant(oldState === PageState.RENDER_DONE, msg);
+                    err(PageState.RENDER_DONE);
                     this.#states[page - 1] = PageState.DESTROY;
                 } else {
                     invariant(false, `invalid action: ${action}`);
@@ -344,12 +385,26 @@ export default class PageManager {
             }
         }
 
+        newUpdate.outstandingRender = this.#outstandingRender;
+
         if (noPrev) this.onUpdate({ ...newUpdate, states: this.#states });
         else {
             const diffed: Update = {};
             let notEmpty = false;
             for (const [k, v] of Object.entries(newUpdate)) {
-                if (v !== this.#update!![k as keyof PartialUpdate]) {
+                const old = this.#update!![k as keyof PartialUpdate];
+                if (typeof v === "number" || v === null) {
+                    if (v !== old) {
+                        // @ts-ignore: TS doesn't know the value in v must be a number or null
+                        diffed[k as keyof PartialUpdate] = v;
+                        notEmpty = true;
+                    }
+                } else if (
+                    !old
+                    || ((old as PageViewport).width !== v.width
+                        || (old as PageViewport).height !== v.height)
+                ) {
+                    // @ts-ignore: TS doesn't know the value in v must be a viewport
                     diffed[k as keyof PartialUpdate] = v;
                     notEmpty = true;
                 }
