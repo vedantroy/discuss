@@ -97,6 +97,7 @@ export default class PageManager {
     #running: boolean;
     #events: Array<Event>;
     #viewport: PageViewport;
+    #y: number;
 
     readonly #baseViewport: PageViewport;
     readonly #hGap: number;
@@ -120,6 +121,7 @@ export default class PageManager {
         );
         this.#events = [];
         this.#running = false;
+        this.#y = -1;
         this.#renderQueueIdx = -1;
         this.#currentPage = -1;
         this.renderQueues = renderQueues;
@@ -153,6 +155,11 @@ export default class PageManager {
 
     #continueRender(): { action: InternalType; page?: number } {
         const toRender = this.renderQueues[this.#currentPage - 1];
+        if (toRender === undefined) {
+            console.log("BUG:");
+            console.log(this.#currentPage - 1);
+            console.log(this.renderQueues.length);
+        }
         while (this.#rendered.has(toRender[this.#renderQueueIdx]) && this.#renderQueueIdx < toRender.length) {
             this.#renderQueueIdx++;
         }
@@ -185,6 +192,7 @@ export default class PageManager {
             : { action: InternalType.BLOCKED_OTHER, page: this.#outstandingRender };
     }
 
+    // TODO: Remove getter
     get #pageHeight() {
         return this.#viewport.height;
     }
@@ -198,7 +206,7 @@ export default class PageManager {
         return { x: startOfPageLeft, y: startOfPageTop };
     }
 
-    get height() {
+    height() {
         // For 2 pages (represented horizontally), we have:
         // vgap
         // PAGE 1
@@ -233,7 +241,7 @@ export default class PageManager {
 
     setY = (y: number) => {
         const height = this.height;
-        invariant(0 <= y && y <= this.height, `${y} > ${height}`);
+        invariant(0 <= y && y <= this.height(), `${y} > ${height}`);
         this.#events.push({ type: EventType.SET_Y, y });
     };
 
@@ -308,15 +316,25 @@ export default class PageManager {
         ) as Set<number>;
 
         if (zoomEvent !== null) {
-            console.log(zoomEvent.idx, movementEvent?.idx);
+            // TODO: What do we do if there's a movement event after a zoom event?
+            // Does it matter ???
+            // console.log(zoomEvent.idx, movementEvent?.idx);
             const { scale } = zoomEvent;
             const newVp = this.#baseViewport.clone({ scale });
+
             const { width, height } = this.#viewport;
+            const oldHeight = this.height();
             if (newVp.width !== width || newVp.height !== height) {
                 this.#viewport = newVp;
+                // We need to scale the y-distance
+                invariant(this.#y !== -1, `unset y`);
+                const oldFrac = this.#y / oldHeight;
+                const newY = oldFrac * this.height();
+                this.#y = newY;
+
                 // We need to update all internal / mutable state
                 // for methods like `this.#goToPage` to work correctly
-                newUpdate = { ...newUpdate, viewport: this.#viewport };
+                newUpdate = { ...newUpdate, viewport: this.#viewport, y: this.#y };
             }
         }
 
@@ -325,10 +343,12 @@ export default class PageManager {
             if (event.type === EventType.GO_TO_PAGE) {
                 const { page } = event;
                 const { x, y } = this.#goToPage(page);
-                newUpdate = { ...newUpdate, x, y, page };
+                this.#y = y;
+                newUpdate = { ...newUpdate, x, y: this.#y, page };
             } else {
                 invariant(event.type === EventType.SET_Y, `invalid type: ${event.type}`);
                 const { page } = this.#setY(event.y);
+                this.#y = event.y;
                 newUpdate = { ...newUpdate, page };
             }
             this.#currentPage = newUpdate.page!!;

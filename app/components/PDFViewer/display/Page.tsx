@@ -228,7 +228,7 @@ function Page(
     const styles = { ...style, width, height };
     return canvasExists
         ? (
-            <div className="shadow relative" style={styles}>
+            <div data-page={pageNum} className="shadow relative" style={styles}>
                 <canvas ref={canvasRef} width={width} height={height} />
                 {textInfo
                     ? (
@@ -244,6 +244,7 @@ function Page(
         )
         : (
             <div
+                data-page={pageNum}
                 // Tailwind CSS was not working for the background color
                 style={{
                     background: `url(${gif})`,
