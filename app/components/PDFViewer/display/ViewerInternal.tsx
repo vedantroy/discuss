@@ -78,11 +78,6 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
         if (isNum(page)) setCurrentPage(page);
         if (isNum(y)) queuedScrollYRef.current = y;
         if (viewport) setViewport(viewport);
-        if (viewport) {
-            console.log("vp change");
-            console.log(viewport);
-            console.log(viewport.width);
-        }
         if (Array.isArray(states)) {
             setPageStates(states.map(x => x === PageState.RENDER_DONE ? RenderState.RENDER : x));
         }
@@ -160,7 +155,6 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
         () => {
             // Pages are only displayed if the page manager exists ...
             if (!pm) return [];
-            console.log(outstandingRender);
 
             return pageStates.map((state, idx) => {
                 const style = {

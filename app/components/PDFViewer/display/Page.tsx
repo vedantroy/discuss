@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import invariant from "tiny-invariant";
 import gif from "./loading-icon.gif";
+import { PageState } from "../controller/PageManager";
 
 const InternalState = {
     CANVAS_NONE: "canvas_none",
@@ -71,13 +72,18 @@ function renderGraphics(
                 invariant(renderFinished, `no render callback when render finished`);
                 renderFinished(pageNum);
             } else {
-                console.log(`skipping b/c ${pageNum} !== ${outstandingRender}`);
+                console.log(`${pageNum} no render callback b/c ${outstandingRender}`);
             }
         })
         .catch((e: unknown) => {
-            internalStateRef.current = InternalState.ERROR;
-            console.log("ERROR: " + pageNum);
-            console.log(e);
+            const isCancel = e instanceof RenderingCancelledException;
+            if (!isCancel) {
+                internalStateRef.current = InternalState.ERROR;
+                console.log("ERROR: " + pageNum);
+                console.log(e);
+            } else {
+                console.log(`${pageNum}: cancel`)
+            }
         });
 }
 
@@ -86,9 +92,12 @@ function Page(
 ) {
     const [textInfo, setTextInfo] = useState<{ html: string } | null>(null);
 
+    const textContent = useRef<TextContent | null>(null)
+    const textContentPromise = useRef<{ p: Promise<TextContent> | null }>({ p: null })
+
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const notifyRef = useRef<boolean>(false);
-    const renderTaskRef = useRef<RenderTask | null>(null);
+    const renderTaskRef = useRef<RenderTask>(null);
     const internalStateRef = useRef<InternalState>(InternalState.CANVAS_NONE);
     const { width, height } = viewport;
 
@@ -114,14 +123,22 @@ function Page(
     useEffect(() => {
         let cancel = false;
         if (page === undefined) return;
+        if (textContentPromise.current.p === null) {
+            textContentPromise.current = { p: page.getTextContent() }
+        }
+
         async function go() {
+            if (state !== RenderState.RENDER) return
             const frag = document.createDocumentFragment();
-            const text = page!!.streamTextContent();
+            if (textContent.current === null) {
+                textContent.current = await textContentPromise.current.p
+            }
+            if (cancel) return;
             const task = renderTextLayer({
                 // @ts-ignore https://github.com/mozilla/pdf.js/issues/14716
                 container: frag,
                 viewport,
-                textContentStream: text,
+                textContent: textContent.current!!,
             });
             try {
                 await task.promise;
@@ -142,7 +159,7 @@ function Page(
         return () => {
             cancel = true;
         };
-    }, [page, width, height]);
+    }, [page, width, height, state]);
 
     useEffect(() => {
         const { current: internal } = internalStateRef;
@@ -161,7 +178,7 @@ function Page(
                     case InternalState.CANVAS_DONE:
                     case InternalState.CANVAS_RENDERING:
                         internalStateRef.current = InternalState.CANVAS_RENDERING;
-                        console.log(`${pageNum}: doing re-render b/c of viewport change`);
+                        console.log(`${pageNum}: re-render b/c of viewport change`);
                         if (renderTaskRef.current) {
                             renderTaskRef.current.cancel();
                         }
@@ -199,8 +216,7 @@ function Page(
                     case InternalState.CANVAS_DONE:
                         invariant(destroyFinished, `Invalid cleanup callback: ${stateDescription}`);
                         deleteCanvas(InternalState.CANVAS_NONE);
-                        notifyRef.current = false;
-                        console.log(`${pageNum}: Notifying destroy`)
+                        console.log(`${pageNum}: notifying destroy`)
                         destroyFinished(pageNum);
                 }
                 break;
@@ -229,7 +245,7 @@ function Page(
     const styles = { ...style, width, height };
     return canvasExists
         ? (
-            <div data-page={pageNum} className="shadow relative" style={styles}>
+            <div data-page={pageNum} className="shadow relative" style={{...styles, width, height }}>
                 <canvas ref={canvasRef} width={width} height={height} />
                 {textInfo
                     ? (

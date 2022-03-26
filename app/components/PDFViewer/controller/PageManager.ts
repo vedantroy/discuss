@@ -367,8 +367,9 @@ export default class PageManager {
                 this.#renderQueueIdx = 0;
             }
             const { action, page } = this.#continueRender();
-            console.log("CONTINUE ...")
-            console.log(action, page)
+
+            console.log(`continue - ${action}, ${page}`)
+
             if (
                 action !== InternalType.BLOCKED_OTHER
                 && action !== InternalType.BLOCKED_SELF
