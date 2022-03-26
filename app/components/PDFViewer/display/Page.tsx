@@ -200,6 +200,7 @@ function Page(
                         invariant(destroyFinished, `Invalid cleanup callback: ${stateDescription}`);
                         deleteCanvas(InternalState.CANVAS_NONE);
                         notifyRef.current = false;
+                        console.log(`${pageNum}: Notifying destroy`)
                         destroyFinished(pageNum);
                 }
                 break;

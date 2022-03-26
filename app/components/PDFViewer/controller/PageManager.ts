@@ -32,6 +32,7 @@ export type PageState = typeof PageState[keyof typeof PageState];
 const InternalType = {
     DONE: "done",
     BLOCKED_SELF: "blocked_self",
+    BLOCKED_SELF_DESTROY: "blocked_self_destroy",
     BLOCKED_OTHER: "blocked_other",
     RENDER: "render",
     DESTROY: "destroy",
@@ -172,6 +173,9 @@ export default class PageManager {
         const pageToRender = toRender[this.#renderQueueIdx];
         if (pageToRender === this.#outstandingRender) {
             return { action: InternalType.BLOCKED_SELF, page: this.#outstandingRender };
+        }
+        if (this.#states[pageToRender - 1] === PageState.DESTROY) {
+            return { action: InternalType.BLOCKED_SELF_DESTROY, page: pageToRender}
         }
 
         const pageBufferFull = this.#rendered.size === this.#pageBufferSize;
@@ -363,11 +367,15 @@ export default class PageManager {
                 this.#renderQueueIdx = 0;
             }
             const { action, page } = this.#continueRender();
+            console.log("CONTINUE ...")
+            console.log(action, page)
             if (
                 action !== InternalType.BLOCKED_OTHER
                 && action !== InternalType.BLOCKED_SELF
+                && action !== InternalType.BLOCKED_SELF_DESTROY
                 && action !== InternalType.DONE
             ) {
+
                 invariant(typeof page === "number", `invalid page: ${page} for action: ${action}`);
                 newUpdate = { ...newUpdate, [action]: page };
                 const oldState = this.#states[page - 1];
@@ -395,6 +403,7 @@ export default class PageManager {
                 } else {
                     invariant(false, `invalid action: ${action}`);
                 }
+            } else {
             }
         }
 
