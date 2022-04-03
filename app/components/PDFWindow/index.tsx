@@ -1,4 +1,5 @@
 import copy from "copy-to-clipboard";
+import _ from "lodash";
 import * as pdfjs from "pdfjs-dist";
 import { PDFDocumentProxy } from "pdfjs-dist";
 import { useEffect, useRef, useState } from "react";
@@ -72,10 +73,13 @@ export default function({ url, highlights }: PDFWindowProps) {
 
     if (!loaded) return <div>loading...</div>;
 
+    const pageToHighlights = _.groupBy(highlights, h => h.page);
+
     return (
         <div>
             <Toaster reverseOrder={true} position="bottom-right" />
             <Viewer
+                pageToHighlights={pageToHighlights}
                 highlights={highlights}
                 firstPage={1}
                 width={width}

@@ -11,10 +11,13 @@ import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import invariant from "tiny-invariant";
 import { toId } from "~/api-transforms/spanId";
-import { PostHighlight } from "../../types";
+import { PostHighlight, Rect } from "../../types";
 import { Comment, makeSelectionRegex, stringifyComments } from "./deepLink";
+import HighlightArea from "./Highlight";
 import gif from "./loading-icon.gif";
 import { makeRects } from "./selection";
+
+type HighlightArea = typeof HighlightArea;
 
 const InternalState = {
     CANVAS_NONE: "canvas_none",
@@ -111,7 +114,7 @@ function Page(
     // so the comment data must go in to 2 places
     // doesn't seem like worth using redux b/c we don't need to update anything - can prop drill
 
-    // const [rects, setRects] =
+    const [HighlightAreas, setHighlightAreas] = useState<JSX.Element[]>([]);
 
     const textContent = useRef<TextContent | null>(null);
     const textContentPromise = useRef<{ p: Promise<TextContent> | null }>({ p: null });
@@ -130,49 +133,30 @@ function Page(
         const pageTextContainer = document.getElementById(pageTextId);
         if (!pageTextContainer) return;
 
+        const { x, y } = pageTextContainer.getBoundingClientRect();
+
         invariant(pageTextContainer, `id!!!!: ${pageTextId} not found`);
         invariant(pageTextContainer.innerHTML === textInfo.html, `stale layout (use useLayoutEffect)`);
 
         const ids = new Set(
-            highlights.flatMap(c => [c.anchorId, c.focusId]),
+            highlights.flatMap(c => ["#" + c.anchorId, "#" + c.focusId]),
         );
         const spans = Array.from(pageTextContainer.querySelectorAll<HTMLSpanElement>(Array.from(ids).join(", ")));
         const idToSpan = _.fromPairs(spans.map(span => [span.id, span]));
 
-        for (const { anchorId, focusId } of highlights) {
+        const highlightAreas = [];
+        for (const { anchorId, focusId, anchorOffset, focusOffset, post } of highlights) {
             const start = idToSpan[anchorId];
             const end = idToSpan[focusId];
 
-            // invariant(start, `no element with id: ${anchorId}`);
-            // invariant(end, `no element with id: ${focusId}`);
-            const rects = makeRects(start, end);
+            invariant(start, `${pageNum}: no element with id: ${anchorId}`);
+            invariant(end, `${pageNum}: no element with id: ${focusId}`);
+
+            const rects = makeRects(start, end, { x, y, anchorOffset, focusOffset });
+            highlightAreas.push(<HighlightArea key={post} rects={rects} id={post} />);
         }
-
-        console.log(spans);
+        setHighlightAreas(highlightAreas);
     }, [textInfo?.html, highlights]);
-
-    // useEffect(() => {
-    //    if (textInfo) {
-    //        const { html } = textInfo;
-    //        // For 10_000 comments on a page, it takes ~ 20 ms max
-    //        // There's no point recycling this regex ...
-    //        const regexp = makeSelectionRegex(comments, pageNum);
-    //        if (regexp === null) return;
-
-    //        const matches = html.matchAll(regexp);
-    //        for (const match of matches) {
-    //            const [_, s_id, s_top, s_left, s_transformX] = match;
-    //            const id = getNum(s_id, "id");
-    //            const top = getNum(s_top, "top");
-    //            const left = getNum(s_left, "left");
-    //            const transformX = getNum(s_transformX, "transformX");
-
-    //            console.log(id, top, left, transformX);
-    //        }
-    //        console.log([...matches]);
-    //        invariant(matches !== null, `no matches for regexp: ${regexp}`);
-    //    }
-    // }, [textInfo?.html]);
 
     const stateDescription = `(internal=${internalState}, render=${state}, page=${pageNum})`;
 
@@ -337,13 +321,15 @@ function Page(
                         <div
                             id={pageTextId}
                             style={{ width, height }}
-                            className="PageText"
+                            className="PageText inset-0 absolute leading-none z-50"
                             dangerouslySetInnerHTML={{ __html: textInfo.html }}
                         >
                         </div>
                     )
                     : null}
+                <div className="inset-0 absolute w-0 h-0">{HighlightAreas}</div>
                 <div
+                    // TODO: Can we just render this conditionally ? (reduces # of divs)
                     className="inset-0 absolute"
                     style={{
                         width,

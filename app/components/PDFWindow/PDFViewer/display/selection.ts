@@ -1,14 +1,12 @@
 import invariant from "tiny-invariant";
-
-type Rect = {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-};
+import { Rect } from "../../types";
 
 // TODO: Handle partial-highlight case
-export function makeRects(start: HTMLSpanElement, end: HTMLSpanElement): Rect[] {
+export function makeRects(
+    start: HTMLSpanElement,
+    end: HTMLSpanElement,
+    { x, y, anchorOffset, focusOffset }: { x: number; y: number; anchorOffset: number; focusOffset: number },
+): Rect[] {
     const range = document.createRange();
     range.selectNode(start);
     range.selectNode(end);
@@ -20,8 +18,43 @@ export function makeRects(start: HTMLSpanElement, end: HTMLSpanElement): Rect[] 
     for (const span of spans) {
         if (span === start) foundStart = true;
         if (foundStart) {
-            const rect = span.getBoundingClientRect();
-            rects.push(rect);
+            if (span === start || span === end) {
+                // We need to account for offsets
+                // My own understanding of this code is rough ...
+                const cloned = span.cloneNode(true);
+                span.parentNode!!.appendChild(cloned);
+                const textNode = cloned.firstChild;
+                invariant(
+                    textNode && textNode?.nodeType === Node.TEXT_NODE,
+                    `no text node, found: ${textNode?.nodeName}`,
+                );
+
+                const range = new Range();
+                if (start === end) {
+                    range.setStart(textNode, anchorOffset);
+                    range.setEnd(textNode, focusOffset);
+                } else if (span === start) {
+                    range.setStart(textNode, anchorOffset);
+                    range.setEndAfter(textNode);
+                } else if (span === end) {
+                    range.setStartBefore(textNode);
+                    range.setEnd(textNode, focusOffset);
+                }
+
+                // TODO: Is this a leak ?
+                const wrapper = document.createElement("span");
+                range.surroundContents(wrapper);
+                const { x: sx, width } = wrapper.getBoundingClientRect();
+                // There's a bug here where the y-dimensions of the wrapper
+                // are incorrect -- we can brute-force around it by using the
+                // y-dims from the original span (since we only care about the x-dimensions)
+                const { y: sy, height } = span.getBoundingClientRect();
+                cloned.parentNode!!.removeChild(cloned);
+                rects.push({ x: sx - x, y: sy - y, width, height });
+            } else {
+                const { x: sx, y: sy, width, height } = span.getBoundingClientRect();
+                rects.push({ x: sx - x, y: sy - y, width, height });
+            }
         }
         if (span === end) break;
     }

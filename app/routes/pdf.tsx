@@ -25,10 +25,10 @@ export const loader: LoaderFunction = async () => {
         highlights: [{
             post: "https://example.org",
             page: 2,
-            anchorIdx: 1,
-            focusIdx: 8,
+            anchorIdx: 0,
+            focusIdx: 3,
             anchorOffset: 2,
-            focusOffset: 3,
+            focusOffset: 0,
         }],
     };
     return json(data);
@@ -38,8 +38,8 @@ export default function Index() {
     const data = useLoaderData<API>();
 
     const highlights = data.highlights.map(({ page, anchorIdx, focusIdx, ...rest }) => ({
-        anchorId: `#${toId(page, anchorIdx)}`,
-        focusId: `#${toId(page, focusIdx)}`,
+        anchorId: toId(page, anchorIdx),
+        focusId: toId(page, focusIdx),
         page,
         ...rest,
     }));

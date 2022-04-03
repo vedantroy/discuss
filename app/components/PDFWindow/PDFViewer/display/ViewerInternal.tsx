@@ -31,6 +31,7 @@ type ViewerProps = {
     width: number;
     height: number;
     highlights: PostHighlight[];
+    pageToHighlights: Record<number, PostHighlight[]>;
 
     onSelection: (ctx: SelectionContext | null) => void;
 };
@@ -46,7 +47,7 @@ function isNum(x: unknown): x is number {
     return typeof x === "number";
 }
 
-function Viewer({ doc, firstPage, width, height, onSelection, highlights }: ViewerProps) {
+function Viewer({ doc, firstPage, width, height, onSelection, highlights, pageToHighlights }: ViewerProps) {
     const forceUpdate: () => void = useState()[1].bind(null, {} as any);
 
     // TODO: Get this call out of here & into the parent
@@ -178,7 +179,7 @@ function Viewer({ doc, firstPage, width, height, onSelection, highlights }: View
                 };
                 return (
                     <Page
-                        highlights={highlights}
+                        highlights={pageToHighlights[idx + 1] || []}
                         style={style}
                         key={idx}
                         viewport={viewport!!}
