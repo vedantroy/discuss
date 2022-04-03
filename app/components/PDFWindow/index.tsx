@@ -7,10 +7,12 @@ import invariant from "tiny-invariant";
 import { getDeepLinkParams } from "./PDFViewer/display/deepLink";
 import { SelectionContext } from "./PDFViewer/display/selection";
 import Viewer from "./PDFViewer/display/ViewerInternal";
+import { PostHighlight } from "./types";
 import useWindowDimensions from "./useWindowDimensions";
 
 type PDFWindowProps = {
     url: string;
+    highlights: PostHighlight[];
 };
 
 type ToastIds = {
@@ -20,7 +22,7 @@ type ToastIds = {
 const HOTKEY_LINK = "l";
 const HOTKEY_POST = "p";
 
-export default function({ url }: PDFWindowProps) {
+export default function({ url, highlights }: PDFWindowProps) {
     const [loaded, setLoaded] = useState(false);
     const docRef = useRef<PDFDocumentProxy | null>(null);
     const { width, height } = useWindowDimensions();
@@ -74,6 +76,7 @@ export default function({ url }: PDFWindowProps) {
         <div>
             <Toaster reverseOrder={true} position="bottom-right" />
             <Viewer
+                highlights={highlights}
                 firstPage={1}
                 width={width}
                 height={height}

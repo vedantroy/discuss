@@ -8,6 +8,7 @@ import Page, { RenderState } from "./Page";
 // TODO: check bundle size
 import { clamp, fill, range } from "lodash";
 import invariant from "tiny-invariant";
+import { PostHighlight } from "../../types";
 import { processSelection, SelectionContext } from "./selection";
 
 pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
@@ -29,6 +30,7 @@ type ViewerProps = {
     firstPage: number;
     width: number;
     height: number;
+    highlights: PostHighlight[];
 
     onSelection: (ctx: SelectionContext | null) => void;
 };
@@ -44,7 +46,7 @@ function isNum(x: unknown): x is number {
     return typeof x === "number";
 }
 
-function Viewer({ doc, firstPage, width, height, onSelection }: ViewerProps) {
+function Viewer({ doc, firstPage, width, height, onSelection, highlights }: ViewerProps) {
     const forceUpdate: () => void = useState()[1].bind(null, {} as any);
 
     // TODO: Get this call out of here & into the parent
@@ -176,7 +178,7 @@ function Viewer({ doc, firstPage, width, height, onSelection }: ViewerProps) {
                 };
                 return (
                     <Page
-                        comments={[{ anchorId: 1, focusId: 2, anchorOffset: 1, focusOffset: 2 }]}
+                        highlights={highlights}
                         style={style}
                         key={idx}
                         viewport={viewport!!}

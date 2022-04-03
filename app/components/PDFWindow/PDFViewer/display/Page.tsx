@@ -10,23 +10,11 @@ import React, { memo, useLayoutEffect } from "react";
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import invariant from "tiny-invariant";
+import { toId } from "~/api-transforms/spanId";
+import { PostHighlight } from "../../types";
 import { Comment, makeSelectionRegex, stringifyComments } from "./deepLink";
 import gif from "./loading-icon.gif";
 import { makeRects } from "./selection";
-
-// fromId(toId(x)) = x
-// (not literally though)
-function toId(page: number, n: number) {
-    // If selectors start w/ a number we need to use annoying things like
-    // CSS.escape
-    // https://stackoverflow.com/questions/20306204/using-queryselector-with-ids-that-are-numbers
-    return `t${page}-${n}`;
-}
-
-function fromId(id: string): [number, number] {
-    const [page, n] = id.split("-");
-    return [parseInt(page.slice(1)), parseInt(n)];
-}
 
 const InternalState = {
     CANVAS_NONE: "canvas_none",
@@ -53,7 +41,7 @@ type PageProps = {
     viewport: PageViewport;
     style?: CSSProperties;
     outstandingRender: number | null;
-    comments: Comment[];
+    highlights: PostHighlight[];
 };
 
 function renderGraphics(
@@ -110,7 +98,7 @@ const getNum = (x: string, name: string) => {
 };
 
 function Page(
-    { state, page, pageNum, viewport, renderFinished, outstandingRender, destroyFinished, style = {}, comments }:
+    { state, page, pageNum, viewport, renderFinished, outstandingRender, destroyFinished, style = {}, highlights }:
         PageProps,
 ) {
     const [textInfo, setTextInfo] = useState<{ html: string } | null>(null);
@@ -138,20 +126,7 @@ function Page(
     useEffect(() => {
         if (!textInfo?.html) return;
 
-        type Comment = {
-            anchorId: string;
-            focusId: string;
-            anchorOffset: number;
-            focusOffset: number;
-        };
-        const comments: Comment[] = [{
-            anchorId: toId(pageNum, 1),
-            focusId: toId(pageNum, 5),
-            anchorOffset: 1,
-            focusOffset: 2,
-        }];
-
-        if (comments.length === 0) return;
+        if (highlights.length === 0) return;
         const pageTextContainer = document.getElementById(pageTextId);
         if (!pageTextContainer) return;
 
@@ -159,22 +134,22 @@ function Page(
         invariant(pageTextContainer.innerHTML === textInfo.html, `stale layout (use useLayoutEffect)`);
 
         const ids = new Set(
-            comments.flatMap(c => ["#" + c.anchorId, "#" + c.focusId]),
+            highlights.flatMap(c => [c.anchorId, c.focusId]),
         );
         const spans = Array.from(pageTextContainer.querySelectorAll<HTMLSpanElement>(Array.from(ids).join(", ")));
         const idToSpan = _.fromPairs(spans.map(span => [span.id, span]));
 
-        for (const { anchorId, focusId } of comments) {
+        for (const { anchorId, focusId } of highlights) {
             const start = idToSpan[anchorId];
             const end = idToSpan[focusId];
 
-            invariant(start, `no element with id: ${anchorId}`);
-            invariant(end, `no element with id: ${focusId}`);
+            // invariant(start, `no element with id: ${anchorId}`);
+            // invariant(end, `no element with id: ${focusId}`);
             const rects = makeRects(start, end);
         }
 
         console.log(spans);
-    }, [textInfo?.html, comments]);
+    }, [textInfo?.html, highlights]);
 
     // useEffect(() => {
     //    if (textInfo) {
