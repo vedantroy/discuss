@@ -1,3 +1,8 @@
+# 03-04-2022
+
+- I feel bad about my regexp based solution to commenting. why?
+  - I didn't plan it out at all. So I lacked the necessary information & now I realize it won't work.
+
 # 09-03-2022
 
 - EDD:

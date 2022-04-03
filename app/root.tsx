@@ -1,7 +1,6 @@
-import css from "@phuocng/react-pdf-viewer/cjs/react-pdf-viewer.css";
+// import css from "@phuocng/react-pdf-viewer/cjs/react-pdf-viewer.css";
 import { Links, LiveReload, Meta, Outlet, Scripts, ScrollRestoration } from "remix";
 import type { MetaFunction } from "remix";
-import css2 from "~/components/PDFViewer/styles/page.css";
 import styles from "./styles/app.css";
 
 export const meta: MetaFunction = () => {
@@ -9,7 +8,7 @@ export const meta: MetaFunction = () => {
 };
 
 export function links() {
-    return [{ rel: "stylesheet", href: styles }, { rel: "stylesheet", href: css }, { rel: "stylesheet", href: css2 }];
+    return [{ rel: "stylesheet", href: styles }];
 }
 
 export default function App() {

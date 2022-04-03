@@ -1,32 +1,36 @@
 import * as pdfjs from "pdfjs-dist";
 import type { PDFDocumentProxy, PDFPageProxy, TextContent } from "pdfjs-dist/types/src/display/api";
 import { PageViewport } from "pdfjs-dist/types/src/display/display_utils";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { KeyboardEventHandler, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PageManager, { makeRenderQueues, PageState } from "../controller/PageManager";
 import Page, { RenderState } from "./Page";
 
 // TODO: check bundle size
-import { debounce, fill, invert, range } from "lodash";
+import { clamp, fill, range } from "lodash";
 import invariant from "tiny-invariant";
+import { processSelection, SelectionContext } from "./selection";
 
 pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
-// pdfjs.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.13.216/pdf.worker.min.js";
 
 // TODO: replace this params
 const PAGE_BUFFER_SIZE = 5;
 const MAX_SCALE_FACTOR = 4;
+
+const NAV_KEYS = new Set(["ArrowLeft", "ArrowRight", "Delete", "Backspace"]);
 
 // This can't be a prop b/c
 // we would need to call a method on the page manager to
 // set the new v_gap (doable, just not now ...)
 const V_GAP = 10;
 
-type ViewerArgs = {
+type ViewerProps = {
     // We can't do anything till we have the document ...
     doc: PDFDocumentProxy;
     firstPage: number;
     width: number;
     height: number;
+
+    onSelection: (ctx: SelectionContext | null) => void;
 };
 
 const StartupState = {
@@ -40,14 +44,17 @@ function isNum(x: unknown): x is number {
     return typeof x === "number";
 }
 
-export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
+function Viewer({ doc, firstPage, width, height, onSelection }: ViewerProps) {
+    const forceUpdate: () => void = useState()[1].bind(null, {} as any);
+
     // TODO: Get this call out of here & into the parent
     const [allPagesLoaded, setAllPagesLoaded] = useState(false);
     const [startupState, setStartupState] = useState<StartupState>(StartupState.NO_PAGE_MANAGER);
-    const [currentPage, setCurrentPage] = useState<number>(firstPage);
     const [pageStates, setPageStates] = useState<RenderState[]>(fill(new Array(doc.numPages), RenderState.NONE));
 
+    const pageInputRef = useRef<HTMLInputElement>(null);
     const zoomRef = useRef<number>(1.0);
+
     const queuedScrollYRef = useRef<number | null>(null);
     const { current: pageToPromise } = useRef<Record<number, Promise<number>>>({});
     // We don't store text content here (although that would make design simpler)
@@ -75,8 +82,14 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
             }
         }
         if (outstandingRender !== undefined) setOutstandingRender(outstandingRender);
-        if (isNum(page)) setCurrentPage(page);
-        if (isNum(y)) queuedScrollYRef.current = y;
+        if (isNum(page)) {
+            pageInputRef.current!!.value = page.toString();
+        }
+
+        if (isNum(y)) {
+            queuedScrollYRef.current = y;
+            forceUpdate();
+        }
         if (viewport) setViewport(viewport);
         if (Array.isArray(states)) {
             setPageStates(states.map(x => x === PageState.RENDER_DONE ? RenderState.RENDER : x));
@@ -163,6 +176,7 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
                 };
                 return (
                     <Page
+                        comments={[{ anchorId: 1, focusId: 2, anchorOffset: 1, focusOffset: 2 }]}
                         style={style}
                         key={idx}
                         viewport={viewport!!}
@@ -183,17 +197,50 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
         [pageStates, viewport, outstandingRender],
     );
 
+    const maxDigits = doc.numPages.toString().length;
+
+    const goToPageFromInput = useCallback(() => {
+        const text = pageInputRef.current?.value || "";
+        const i = parseInt(text === "" ? "1" : text);
+        invariant(isFinite(i), `invalid input: ${text}`);
+        pm!!.goToPage(clamp(i, 1, doc.numPages));
+    }, [pageInputRef?.current, pm, doc.numPages]);
+
     return pm
         ? (
             <div
+                onMouseUp={() => {
+                    const ctx = processSelection(document.getSelection());
+                    onSelection(ctx);
+                }}
                 style={{ height }}
-                className="flex flex-col overflow-hidden bg-zinc-200"
+                className="flex flex-col overflow-hidden bg-zinc-400"
             >
-                <div className="flex flex-row">
-                    <div className="h-8">{outstandingRender ? "loading" : "done"}</div>
-                    <div className="h-8">current page: {currentPage}</div>
+                <div
+                    // TODO: Why do we have to use min-height?
+                    className="flex flex-row shadow shadow-zinc-700 bg-zinc-600 min-h-[2rem] items-center text-zinc-200 text-base"
+                    style={{ zIndex: 2 }}
+                >
+                    <input
+                        ref={pageInputRef}
+                        onKeyDown={evt => {
+                            if (evt.ctrlKey || NAV_KEYS.has(evt.key)) return;
+                            if (evt.key === "Enter") {
+                                goToPageFromInput();
+                                return;
+                            }
+                            // only allow numbers
+                            if (!isFinite(parseInt(evt.key)) || evt.key === " ") {
+                                evt.preventDefault();
+                            }
+                        }}
+                        onBlur={() => goToPageFromInput()}
+                        className="border-none outline-none bg-zinc-700 mr-1 ml-2 text-center"
+                        style={{ width: `calc(max(2, ${maxDigits}) * 1ch + 8px)` }}
+                    >
+                    </input>
+                    <div>/ {doc.numPages}</div>
                     <button
-                        className="h-8"
                         onClick={() => {
                             zoomRef.current -= 0.1;
                             pm.setZoom(zoomRef.current);
@@ -202,7 +249,6 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
                         - zoom
                     </button>
                     <button
-                        className="h-8"
                         onClick={() => {
                             zoomRef.current += 0.1;
                             pm.setZoom(zoomRef.current);
@@ -218,7 +264,7 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
                         queuedScrollYRef.current = null;
                         pm.setY(scroll);
                     }}
-                    className="grid justify-center w-screen overflow-scroll"
+                    className="grid justify-center w-screen overflow-auto"
                 >
                     {Pages}
                 </div>
@@ -226,3 +272,5 @@ export default function Viewer({ doc, firstPage, width, height }: ViewerArgs) {
         )
         : <div>Loading..</div>;
 }
+
+export default memo(Viewer);

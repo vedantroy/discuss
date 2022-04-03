@@ -1,4 +1,4 @@
-/* These are copied from the PDF.js web viewer */
+/* These are copied from the PDF.js web viewer with a few of my own modifications */
 .PageText {
 	position: absolute;
 	top: 0;
@@ -9,10 +9,15 @@
 	text-size-adjust: none;
 }
 
-.PageText > span {
+.PageText > span, br {
 	position: absolute;
-	color: transparent;
+	color: transparent; 
 	white-space: pre;
 	transform-origin: 0% 0%;
 	opacity: 0.3;
+	cursor: text;
+}
+
+.PageText > br {
+	user-select: none;
 }

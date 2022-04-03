@@ -1,15 +1,32 @@
 // TODO: Remove the invariants & just use if-stmts instead
 // TODO: Stop internal state from being a ref and just use useMemo
 // TODO: Implement zoom & search ...
+import _ from "lodash";
 import type { PDFPageProxy } from "pdfjs-dist";
 import { RenderingCancelledException, renderTextLayer } from "pdfjs-dist";
 import { RenderParameters, RenderTask, TextContent } from "pdfjs-dist/types/src/display/api";
 import { PageViewport } from "pdfjs-dist/types/web/interfaces";
-import React, { memo } from "react";
+import React, { memo, useLayoutEffect } from "react";
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import invariant from "tiny-invariant";
+import { Comment, makeSelectionRegex, stringifyComments } from "./deepLink";
 import gif from "./loading-icon.gif";
+import { makeRects } from "./selection";
+
+// fromId(toId(x)) = x
+// (not literally though)
+function toId(page: number, n: number) {
+    // If selectors start w/ a number we need to use annoying things like
+    // CSS.escape
+    // https://stackoverflow.com/questions/20306204/using-queryselector-with-ids-that-are-numbers
+    return `t${page}-${n}`;
+}
+
+function fromId(id: string): [number, number] {
+    const [page, n] = id.split("-");
+    return [parseInt(page.slice(1)), parseInt(n)];
+}
 
 const InternalState = {
     CANVAS_NONE: "canvas_none",
@@ -36,8 +53,7 @@ type PageProps = {
     viewport: PageViewport;
     style?: CSSProperties;
     outstandingRender: number | null;
-    // TODO: remove
-    // className?: string;
+    comments: Comment[];
 };
 
 function renderGraphics(
@@ -56,8 +72,6 @@ function renderGraphics(
     invariant(canvas, `invalid canvas`);
     const ctx = canvas.getContext("2d");
     invariant(ctx, `invalid canvas context`);
-    // ctx.clearRect(0, 0, canvas.width, canvas.height);
-    // ctx.beginPath();
 
     const renderArgs: RenderParameters = {
         canvasContext: ctx,
@@ -67,7 +81,6 @@ function renderGraphics(
     renderTaskRef.current = task;
     task.promise
         .then(() => {
-            // renderTaskRef.current!!.cancel()
             renderTaskRef.current = null;
             setInternalState(InternalState.CANVAS_DONE);
             if (pageNum === outstandingRender) {
@@ -90,10 +103,27 @@ function renderGraphics(
         });
 }
 
+const getNum = (x: string, name: string) => {
+    const i = parseFloat(x);
+    invariant(isFinite(i), `invalid (${name}): ${x}`);
+    return i;
+};
+
 function Page(
-    { state, page, pageNum, viewport, renderFinished, outstandingRender, destroyFinished, style = {} }: PageProps,
+    { state, page, pageNum, viewport, renderFinished, outstandingRender, destroyFinished, style = {}, comments }:
+        PageProps,
 ) {
     const [textInfo, setTextInfo] = useState<{ html: string } | null>(null);
+    // we get comment info in some form (as pure API data)
+    // we normalize the comment info (we can do that inside the useEffect)
+    // we make rectangles + some metadata (the title, necessary info for if we click we make a link)
+    // we render commment components
+    // we use onmousemove + something inside the page manager + rtree.js to find intersecting comments
+    // in the comment display bar (@ the bottom), we also use the comments and render them as clickable links
+    // so the comment data must go in to 2 places
+    // doesn't seem like worth using redux b/c we don't need to update anything - can prop drill
+
+    // const [rects, setRects] =
 
     const textContent = useRef<TextContent | null>(null);
     const textContentPromise = useRef<{ p: Promise<TextContent> | null }>({ p: null });
@@ -102,6 +132,72 @@ function Page(
     const renderTaskRef = useRef<RenderTask>(null);
     const [internalState, setInternalState] = useState<InternalState>(InternalState.CANVAS_NONE);
     const { width, height } = viewport;
+
+    const pageTextId = `page-${pageNum}`;
+
+    useEffect(() => {
+        if (!textInfo?.html) return;
+
+        type Comment = {
+            anchorId: string;
+            focusId: string;
+            anchorOffset: number;
+            focusOffset: number;
+        };
+        const comments: Comment[] = [{
+            anchorId: toId(pageNum, 1),
+            focusId: toId(pageNum, 5),
+            anchorOffset: 1,
+            focusOffset: 2,
+        }];
+
+        if (comments.length === 0) return;
+        const pageTextContainer = document.getElementById(pageTextId);
+        if (!pageTextContainer) return;
+
+        invariant(pageTextContainer, `id!!!!: ${pageTextId} not found`);
+        invariant(pageTextContainer.innerHTML === textInfo.html, `stale layout (use useLayoutEffect)`);
+
+        const ids = new Set(
+            comments.flatMap(c => ["#" + c.anchorId, "#" + c.focusId]),
+        );
+        const spans = Array.from(pageTextContainer.querySelectorAll<HTMLSpanElement>(Array.from(ids).join(", ")));
+        const idToSpan = _.fromPairs(spans.map(span => [span.id, span]));
+
+        for (const { anchorId, focusId } of comments) {
+            const start = idToSpan[anchorId];
+            const end = idToSpan[focusId];
+
+            invariant(start, `no element with id: ${anchorId}`);
+            invariant(end, `no element with id: ${focusId}`);
+            const rects = makeRects(start, end);
+        }
+
+        console.log(spans);
+    }, [textInfo?.html, comments]);
+
+    // useEffect(() => {
+    //    if (textInfo) {
+    //        const { html } = textInfo;
+    //        // For 10_000 comments on a page, it takes ~ 20 ms max
+    //        // There's no point recycling this regex ...
+    //        const regexp = makeSelectionRegex(comments, pageNum);
+    //        if (regexp === null) return;
+
+    //        const matches = html.matchAll(regexp);
+    //        for (const match of matches) {
+    //            const [_, s_id, s_top, s_left, s_transformX] = match;
+    //            const id = getNum(s_id, "id");
+    //            const top = getNum(s_top, "top");
+    //            const left = getNum(s_left, "left");
+    //            const transformX = getNum(s_transformX, "transformX");
+
+    //            console.log(id, top, left, transformX);
+    //        }
+    //        console.log([...matches]);
+    //        invariant(matches !== null, `no matches for regexp: ${regexp}`);
+    //    }
+    // }, [textInfo?.html]);
 
     const stateDescription = `(internal=${internalState}, render=${state}, page=${pageNum})`;
 
@@ -144,10 +240,18 @@ function Page(
                 if (!cancel) {
                     let rootElement: HTMLDivElement | null = document.createElement("div");
                     rootElement.appendChild(frag);
-                    const text = rootElement.innerHTML;
+                    const textHTML = rootElement.innerHTML;
+
+                    let id = 0;
+                    // This is ok -- b/c PDF.JS escapes < & > so we won't overwrite content
+                    // in the doc itself
+                    const withIds = textHTML.replace(/<span/g, () => `<span id="${toId(pageNum, id++)}"`);
+
                     // TODO: Does this cause actual GC? Do we even need this line? Does it do anything?
+                    // (I suspect answers are all no)
                     rootElement = null;
-                    setTextInfo({ html: text });
+                    // TODO: delete comments here or in the other place?
+                    setTextInfo({ html: withIds });
                 }
             } catch (e) {
                 console.log("TEXT RENDER ERROR");
@@ -178,13 +282,10 @@ function Page(
                     case InternalState.CANVAS_DONE:
                     case InternalState.CANVAS_RERENDERING:
                     case InternalState.CANVAS_RENDERING:
-                        console.log(`${pageNum}: Resize pathway ...`);
                         setInternalState(InternalState.CANVAS_RERENDERING);
-                        console.log(`${pageNum}: re-render b/c of viewport change`);
                         if (renderTaskRef.current) {
-                            console.log("cancel");
                             renderTaskRef.current.cancel();
-                        } else console.log("no cancel");
+                        }
                         invariant(canvasRef.current, `no canvas`);
                         canvasRef.current.width = width;
                         canvasRef.current.height = height;
@@ -250,6 +351,7 @@ function Page(
         backgroundRepeat: "no-repeat",
         backgroundColor: "white",
     };
+
     return (internalState === InternalState.CANVAS_RENDERING || internalState === InternalState.CANVAS_DONE
             || internalState === InternalState.CANVAS_RERENDERING)
         ? (
@@ -258,6 +360,7 @@ function Page(
                 {textInfo
                     ? (
                         <div
+                            id={pageTextId}
                             style={{ width, height }}
                             className="PageText"
                             dangerouslySetInnerHTML={{ __html: textInfo.html }}
@@ -280,7 +383,6 @@ function Page(
         : (
             <div
                 data-page={pageNum}
-                // Tailwind CSS was not working for the background color
                 style={{
                     ...loadingStyles,
                     ...styles,
