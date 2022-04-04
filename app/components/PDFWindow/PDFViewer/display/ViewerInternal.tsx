@@ -3,6 +3,7 @@ import type { PDFDocumentProxy, PDFPageProxy, TextContent } from "pdfjs-dist/typ
 import { PageViewport } from "pdfjs-dist/types/src/display/display_utils";
 import { KeyboardEventHandler, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PageManager, { makeRenderQueues, PageState } from "../controller/PageManager";
+import Footer from "./Footer";
 import Page, { RenderState } from "./Page";
 
 // TODO: check bundle size
@@ -209,6 +210,8 @@ function Viewer({ doc, firstPage, width, height, onSelection, highlights, pageTo
         pm!!.goToPage(clamp(i, 1, doc.numPages));
     }, [pageInputRef?.current, pm, doc.numPages]);
 
+    // const scrollWidth = window.innerWidth - document.body.clientWidth;
+
     return pm
         ? (
             <div
@@ -221,7 +224,7 @@ function Viewer({ doc, firstPage, width, height, onSelection, highlights, pageTo
             >
                 <div
                     // TODO: Why do we have to use min-height?
-                    className="flex flex-row shadow shadow-zinc-700 bg-zinc-600 min-h-[2rem] items-center text-zinc-200 text-base"
+                    className="flex flex-row shadow shadow-zinc-700 bg-zinc-600 min-h-8 items-center text-zinc-200 text-base"
                     style={{ zIndex: 2 }}
                 >
                     <input
@@ -271,6 +274,8 @@ function Viewer({ doc, firstPage, width, height, onSelection, highlights, pageTo
                 >
                     {Pages}
                 </div>
+                {/* TODO: Prevent this from going on top of the scrollbar*/}
+                <Footer />
             </div>
         )
         : <div>Loading..</div>;

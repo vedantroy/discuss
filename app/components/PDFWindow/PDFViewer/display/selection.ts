@@ -1,7 +1,6 @@
 import invariant from "tiny-invariant";
 import { Rect } from "../../types";
 
-// TODO: Handle partial-highlight case
 export function makeRects(
     start: HTMLSpanElement,
     end: HTMLSpanElement,

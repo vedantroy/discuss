@@ -8,7 +8,7 @@ export function links() {
 }
 
 type APIPostHighlight = {
-    post: string;
+    id: string;
     page: number;
     anchorIdx: number;
     focusIdx: number;
@@ -22,14 +22,32 @@ type API = {
 
 export const loader: LoaderFunction = async () => {
     const data: API = {
-        highlights: [{
-            post: "https://example.org",
-            page: 2,
-            anchorIdx: 0,
-            focusIdx: 3,
-            anchorOffset: 2,
-            focusOffset: 0,
-        }],
+        highlights: [
+            {
+                id: "id1",
+                page: 2,
+                anchorIdx: 0,
+                focusIdx: 3,
+                anchorOffset: 2,
+                focusOffset: 20,
+            },
+            {
+                id: "id2",
+                page: 2,
+                anchorIdx: 4,
+                focusIdx: 7,
+                anchorOffset: 2,
+                focusOffset: 5,
+            },
+            {
+                id: "id3",
+                page: 2,
+                anchorIdx: 5,
+                focusIdx: 6,
+                anchorOffset: 2,
+                focusOffset: 1,
+            },
+        ],
     };
     return json(data);
 };

@@ -4,18 +4,18 @@ import { Rect } from "../../types";
 type HighlightProps = {
     rects: Rect[];
     id: string;
+    active: boolean;
 };
 
-const highlight: React.FC<HighlightProps> = ({ rects, id }) => {
-    const [active, setActive] = useState(false);
-
+const highlight: React.FC<HighlightProps> = ({ rects, id, active }) => {
     return (
         <>
             {rects.map(({ x, y, width, height }, i) => (
                 <div
-                    key={`${id}-${i}`}
-                    className="absolute opacity-30 z-10 bg-black"
-                    style={{ top: y, left: x, width, height }}
+                    // don't want the order to change ..
+                    key={i}
+                    className={`absolute bg-black z-10 ${active ? `opacity-50` : `opacity-10`}`}
+                    style={{ top: y, left: x, width, height, pointerEvents: "all" }}
                 >
                 </div>
             ))}

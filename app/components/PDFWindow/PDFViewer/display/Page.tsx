@@ -6,11 +6,12 @@ import type { PDFPageProxy } from "pdfjs-dist";
 import { RenderingCancelledException, renderTextLayer } from "pdfjs-dist";
 import { RenderParameters, RenderTask, TextContent } from "pdfjs-dist/types/src/display/api";
 import { PageViewport } from "pdfjs-dist/types/web/interfaces";
-import React, { memo, useLayoutEffect } from "react";
+import React, { memo, useLayoutEffect, useMemo } from "react";
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import invariant from "tiny-invariant";
 import { toId } from "~/api-transforms/spanId";
+import Flatbush from "~/vendor/flatbush";
 import { PostHighlight, Rect } from "../../types";
 import { Comment, makeSelectionRegex, stringifyComments } from "./deepLink";
 import HighlightArea from "./Highlight";
@@ -100,6 +101,12 @@ const getNum = (x: string, name: string) => {
     return i;
 };
 
+type HighlightState = {
+    rects: Array<{ rect: Rect; id: string }>;
+    idToRects: Record<string, Rect[]>;
+    flatbush: Flatbush;
+};
+
 function Page(
     { state, page, pageNum, viewport, renderFinished, outstandingRender, destroyFinished, style = {}, highlights }:
         PageProps,
@@ -114,11 +121,13 @@ function Page(
     // so the comment data must go in to 2 places
     // doesn't seem like worth using redux b/c we don't need to update anything - can prop drill
 
-    const [HighlightAreas, setHighlightAreas] = useState<JSX.Element[]>([]);
+    const [activeHighlights, setActiveHighlights] = useState<Set<string>>(new Set());
+    const [highlightState, setHighlightState] = useState<HighlightState | null>(null);
 
     const textContent = useRef<TextContent | null>(null);
     const textContentPromise = useRef<{ p: Promise<TextContent> | null }>({ p: null });
 
+    const pageRef = useRef<HTMLDivElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const renderTaskRef = useRef<RenderTask>(null);
     const [internalState, setInternalState] = useState<InternalState>(InternalState.CANVAS_NONE);
@@ -128,14 +137,13 @@ function Page(
 
     useEffect(() => {
         if (!textInfo?.html) return;
-
         if (highlights.length === 0) return;
         const pageTextContainer = document.getElementById(pageTextId);
         if (!pageTextContainer) return;
 
         const { x, y } = pageTextContainer.getBoundingClientRect();
 
-        invariant(pageTextContainer, `id!!!!: ${pageTextId} not found`);
+        invariant(pageTextContainer, `id: ${pageTextId} not found`);
         invariant(pageTextContainer.innerHTML === textInfo.html, `stale layout (use useLayoutEffect)`);
 
         const ids = new Set(
@@ -144,8 +152,9 @@ function Page(
         const spans = Array.from(pageTextContainer.querySelectorAll<HTMLSpanElement>(Array.from(ids).join(", ")));
         const idToSpan = _.fromPairs(spans.map(span => [span.id, span]));
 
-        const highlightAreas = [];
-        for (const { anchorId, focusId, anchorOffset, focusOffset, post } of highlights) {
+        let allRects: HighlightState["rects"] = [];
+        const idToRects: HighlightState["idToRects"] = {};
+        for (const { anchorId, focusId, anchorOffset, focusOffset, id } of highlights) {
             const start = idToSpan[anchorId];
             const end = idToSpan[focusId];
 
@@ -153,26 +162,23 @@ function Page(
             invariant(end, `${pageNum}: no element with id: ${focusId}`);
 
             const rects = makeRects(start, end, { x, y, anchorOffset, focusOffset });
-            highlightAreas.push(<HighlightArea key={post} rects={rects} id={post} />);
+            idToRects[id] = rects;
+            allRects = allRects.concat(rects.map(rect => ({ rect, id })));
         }
-        setHighlightAreas(highlightAreas);
+
+        // Flatbush performs very fast geometric queries in exchange for
+        // not being able to update the data structure after construction
+        // This trade-off is worth it b/c we do not want to ever remove/delete entries
+        // since that is a source of buggy behavior (never sync a data structure to an expected state
+        // just re-create it -- that's the React way)
+        const flatbush = new Flatbush(allRects.length);
+        allRects.forEach(({ rect: { x, y, width, height } }) => flatbush.add(x, y, x + width, y + height));
+        flatbush.finish();
+
+        setHighlightState({ flatbush, rects: allRects, idToRects });
     }, [textInfo?.html, highlights]);
 
     const stateDescription = `(internal=${internalState}, render=${state}, page=${pageNum})`;
-
-    function deleteCanvas(state: InternalState) {
-        const { current: canvas } = canvasRef;
-        if (!canvas) {
-            console.trace();
-            invariant(false, "foo");
-        }
-        // PDF.js viewer states zeroing width/height
-        // causes Firefox to release graphics resources immediately
-        // reducing memory consumption
-        canvas.width = 0;
-        canvas.height = 0;
-        setInternalState(state);
-    }
 
     useEffect(() => {
         let cancel = false;
@@ -277,7 +283,18 @@ function Page(
                         }
                     case InternalState.CANVAS_DONE:
                         invariant(destroyFinished, `Invalid cleanup callback: ${stateDescription}`);
-                        deleteCanvas(InternalState.CANVAS_NONE);
+
+                        const { current: canvas } = canvasRef;
+                        invariant(canvas, `${stateDescription} no canvas on destroy`);
+                        // PDF.js viewer states zeroing width/height
+                        // causes Firefox to release graphics resources immediately
+                        // reducing memory consumption
+                        canvas.width = 0;
+                        canvas.height = 0;
+                        setInternalState(InternalState.CANVAS_NONE);
+                        // We delete the text info to force a refresh of
+                        // the highlights layer when we re-scroll the page into view
+                        setTextInfo(null);
                         console.log(`${pageNum}: notifying destroy`);
                         destroyFinished(pageNum);
                 }
@@ -314,20 +331,47 @@ function Page(
     return (internalState === InternalState.CANVAS_RENDERING || internalState === InternalState.CANVAS_DONE
             || internalState === InternalState.CANVAS_RERENDERING)
         ? (
-            <div data-page={pageNum} className="shadow relative" style={{ ...styles, width, height }}>
+            // TODO: Is data-page only used for debugging?
+            <div
+                ref={pageRef}
+                // TODO: Is this throttle necessary?
+                onMouseMove={_.throttle(e => {
+                    if (highlightState === null) return;
+                    const { flatbush, rects } = highlightState;
+                    const { current: pageContainer } = pageRef;
+                    const { x, y } = pageContainer!!.getBoundingClientRect();
+                    const { clientX: mx, clientY: my } = e;
+                    const [rx, ry] = [mx - x, my - y];
+                    const rect_idxs = flatbush.search(rx, ry, rx, ry);
+                    const newActiveIds = new Set(rect_idxs.map(idx => rects[idx].id));
+                    if (!_.isEqual(activeHighlights, newActiveIds)) {
+                        setActiveHighlights(newActiveIds);
+                    }
+                }, 10)}
+                data-page={pageNum}
+                className="shadow relative"
+                style={{ ...styles, width, height }}
+            >
                 <canvas ref={canvasRef} width={width} height={height} />
                 {textInfo
                     ? (
                         <div
                             id={pageTextId}
                             style={{ width, height }}
-                            className="PageText inset-0 absolute leading-none z-50"
+                            className="PageText inset-0 absolute leading-none z-20"
                             dangerouslySetInnerHTML={{ __html: textInfo.html }}
                         >
                         </div>
                     )
                     : null}
-                <div className="inset-0 absolute w-0 h-0">{HighlightAreas}</div>
+                {highlightState
+                    && (
+                        <div className="inset-0 absolute w-0 h-0">
+                            {_.toPairs(highlightState.idToRects).map(([id, rects]) => (
+                                <HighlightArea key={id} active={activeHighlights.has(id)} rects={rects} id={id} />
+                            ))}
+                        </div>
+                    )}
                 <div
                     // TODO: Can we just render this conditionally ? (reduces # of divs)
                     className="inset-0 absolute"
