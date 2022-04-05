@@ -9,11 +9,9 @@ type CardProps = {
     active: boolean;
 };
 const Card = ({ hotKey = null, text, active }: CardProps) => {
-    // const [hover, setHover] = useState(false);
-
     return (
         <div
-            className={`card overflow-visible card-compact h-28 w-28 bg-zinc-200 cursor-pointer transition-shadow delay-75 shadow shadow-zinc-400 hover:shadow-md hover:shadow-zinc-500 ${
+            className={`card overflow-visible card-compact h-28 w-28 bg-zinc-200 cursor-pointer transition-shadow duration-75 shadow shadow-zinc-400 hover:shadow-md hover:shadow-zinc-500 ${
                 active ? `shadow-md shadow-zinc-500` : ""
             }`}
         >
@@ -42,7 +40,7 @@ const Page = ({ page, highlights, activeHighlights }: PageProps) => {
 
     return (
         <>
-            <div className="divider divider-horizontal my-3">{page}</div>
+            <div className="divider divider-horizontal my-3 text-zinc-800">{page}</div>
             <div className="flex flex-row gap-4">
                 {ordered.map(({ text, id }) => <Card active={activeHighlights.has(id)} text={text} />)}
             </div>
@@ -58,7 +56,7 @@ type FooterProps = {
 export default function({ activeHighlights, pageToHighlights }: FooterProps) {
     const pages = _(pageToHighlights)
         .keys()
-        // R/C bug :)) -- (parseInt takes 2 params)
+        // R/C bug :) -- (parseInt takes 2 params)
         .map(k => parseInt(k))
         .sort()
         .value();
