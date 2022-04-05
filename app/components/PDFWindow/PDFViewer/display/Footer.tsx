@@ -9,16 +9,12 @@ type CardProps = {
     active: boolean;
 };
 const Card = ({ hotKey = null, text, active }: CardProps) => {
-    const [hover, setHover] = useState(false);
+    // const [hover, setHover] = useState(false);
 
     return (
         <div
-            onMouseEnter={() => setHover(true)}
-            onMouseLeave={() => setHover(false)}
-            className={`card overflow-visible card-compact h-28 w-28 bg-zinc-200 cursor-pointer transition-shadow ${
-                (hover || active)
-                    ? "shadow-md shadow-zinc-500"
-                    : "shadow shadow-zinc-400"
+            className={`card overflow-visible card-compact h-28 w-28 bg-zinc-200 cursor-pointer transition-shadow delay-75 shadow shadow-zinc-400 hover:shadow-md hover:shadow-zinc-500 ${
+                active ? `shadow-md shadow-zinc-500` : ""
             }`}
         >
             {hotKey !== null
