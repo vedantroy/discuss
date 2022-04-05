@@ -46,6 +46,7 @@ type PageProps = {
     style?: CSSProperties;
     outstandingRender: number | null;
     highlights: PostHighlight[];
+    onActiveHighlights: (ids: Set<string>) => void;
 };
 
 function renderGraphics(
@@ -108,8 +109,18 @@ type HighlightState = {
 };
 
 function Page(
-    { state, page, pageNum, viewport, renderFinished, outstandingRender, destroyFinished, style = {}, highlights }:
-        PageProps,
+    {
+        state,
+        page,
+        pageNum,
+        viewport,
+        renderFinished,
+        outstandingRender,
+        destroyFinished,
+        style = {},
+        highlights,
+        onActiveHighlights,
+    }: PageProps,
 ) {
     const [textInfo, setTextInfo] = useState<{ html: string } | null>(null);
     // we get comment info in some form (as pure API data)
@@ -345,6 +356,7 @@ function Page(
                     const rect_idxs = flatbush.search(rx, ry, rx, ry);
                     const newActiveIds = new Set(rect_idxs.map(idx => rects[idx].id));
                     if (!_.isEqual(activeHighlights, newActiveIds)) {
+                        onActiveHighlights(newActiveIds);
                         setActiveHighlights(newActiveIds);
                     }
                 }, 10)}

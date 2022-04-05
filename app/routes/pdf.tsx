@@ -9,6 +9,7 @@ export function links() {
 
 type APIPostHighlight = {
     id: string;
+    text: string;
     page: number;
     anchorIdx: number;
     focusIdx: number;
@@ -25,6 +26,7 @@ export const loader: LoaderFunction = async () => {
         highlights: [
             {
                 id: "id1",
+                text: "a comment",
                 page: 2,
                 anchorIdx: 0,
                 focusIdx: 3,
@@ -34,6 +36,7 @@ export const loader: LoaderFunction = async () => {
             {
                 id: "id2",
                 page: 2,
+                text: "another comment",
                 anchorIdx: 4,
                 focusIdx: 7,
                 anchorOffset: 2,
@@ -42,9 +45,37 @@ export const loader: LoaderFunction = async () => {
             {
                 id: "id3",
                 page: 2,
+                text: "yet another comment",
                 anchorIdx: 5,
                 focusIdx: 6,
                 anchorOffset: 2,
+                focusOffset: 1,
+            },
+            {
+                id: "id4",
+                page: 3,
+                text: "new page!",
+                anchorIdx: 6,
+                focusIdx: 6,
+                anchorOffset: 1,
+                focusOffset: 5,
+            },
+            {
+                id: "id5",
+                page: 3,
+                text: "new page!",
+                anchorIdx: 7,
+                focusIdx: 9,
+                anchorOffset: 1,
+                focusOffset: 5,
+            },
+            {
+                id: "id6",
+                page: 3,
+                text: "new page!",
+                anchorIdx: 10,
+                focusIdx: 12,
+                anchorOffset: 1,
                 focusOffset: 1,
             },
         ],

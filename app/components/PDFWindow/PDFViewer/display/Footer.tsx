@@ -1,14 +1,30 @@
+import _ from "lodash";
+import { useState } from "react";
+import { getIdxFromId } from "~/api-transforms/spanId";
+import { PostHighlight } from "../../types";
+
 type CardProps = {
-    hotKey?: number;
+    hotKey?: number | null;
     text: string;
+    active: boolean;
 };
-const Card = ({ hotKey, text }: CardProps) => {
+const Card = ({ hotKey = null, text, active }: CardProps) => {
+    const [hover, setHover] = useState(false);
+
     return (
-        <div className="card overflow-visible card-compact h-28 w-28 bg-zinc-200 shadow shadow-zinc-400">
-            {hotKey !== undefined
+        <div
+            onMouseEnter={() => setHover(true)}
+            onMouseLeave={() => setHover(false)}
+            className={`card overflow-visible card-compact h-28 w-28 bg-zinc-200 cursor-pointer transition-shadow ${
+                (hover || active)
+                    ? "shadow-md shadow-zinc-500"
+                    : "shadow shadow-zinc-400"
+            }`}
+        >
+            {hotKey !== null
                 ? (
                     <div className="h-5 w-5 absolute left-[-6px] top-[-6px] bg-rose-400 text-center shadow shadow-rose-600 text-white">
-                       {hotKey} 
+                        {hotKey}
                     </div>
                 )
                 : null}
@@ -20,24 +36,42 @@ const Card = ({ hotKey, text }: CardProps) => {
 };
 
 type PageProps = {
-    page: number
-}
+    page: number;
+    highlights: PostHighlight[];
+    activeHighlights: Set<string>;
+};
 
-const Page = ({ page }: PageProps) => {
+const Page = ({ page, highlights, activeHighlights }: PageProps) => {
+    const ordered = highlights.sort((a, b) => getIdxFromId(a.anchorId) - getIdxFromId(b.anchorId));
+
     return (
-            <>
+        <>
             <div className="divider divider-horizontal my-3">{page}</div>
-            <Card hotKey={3} text="long long long long long"/>
-            <Card text="long tecxt !long long long long"/>
-            </>
-    )
-}
+            <div className="flex flex-row gap-4">
+                {ordered.map(({ text, id }) => <Card active={activeHighlights.has(id)} text={text} />)}
+            </div>
+        </>
+    );
+};
 
-export default function() {
+type FooterProps = {
+    activeHighlights: Set<string>;
+    pageToHighlights: Record<number, PostHighlight[]>;
+};
+
+export default function({ activeHighlights, pageToHighlights }: FooterProps) {
+    const pages = _(pageToHighlights)
+        .keys()
+        // R/C bug :)) -- (parseInt takes 2 params)
+        .map(k => parseInt(k))
+        .sort()
+        .value();
+
     return (
         <div className="flex flex-row items-center absolute bottom-0 left-0 right-0 h-32 shadow shadow-zinc-500 bg-zinc-100 z-30">
-            <Page page={3}/>
-            <Page page={4}/>
+            {pages.map(page => (
+                <Page activeHighlights={activeHighlights} key={page} page={page} highlights={pageToHighlights[page]} />
+            ))}
         </div>
     );
 }

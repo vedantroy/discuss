@@ -1,5 +1,6 @@
 export type PostHighlight = {
     id: string;
+    text: string;
     page: number;
     anchorId: string;
     focusId: string;

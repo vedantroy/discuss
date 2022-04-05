@@ -51,6 +51,8 @@ function isNum(x: unknown): x is number {
 function Viewer({ doc, firstPage, width, height, onSelection, highlights, pageToHighlights }: ViewerProps) {
     const forceUpdate: () => void = useState()[1].bind(null, {} as any);
 
+    const [activeHighlights, setActiveHighlights] = useState<Set<string>>(new Set());
+
     // TODO: Get this call out of here & into the parent
     const [allPagesLoaded, setAllPagesLoaded] = useState(false);
     const [startupState, setStartupState] = useState<StartupState>(StartupState.NO_PAGE_MANAGER);
@@ -180,6 +182,7 @@ function Viewer({ doc, firstPage, width, height, onSelection, highlights, pageTo
                 };
                 return (
                     <Page
+                        onActiveHighlights={highlights => setActiveHighlights(highlights)}
                         highlights={pageToHighlights[idx + 1] || []}
                         style={style}
                         key={idx}
@@ -275,7 +278,7 @@ function Viewer({ doc, firstPage, width, height, onSelection, highlights, pageTo
                     {Pages}
                 </div>
                 {/* TODO: Prevent this from going on top of the scrollbar*/}
-                <Footer />
+                <Footer pageToHighlights={pageToHighlights} activeHighlights={activeHighlights} />
             </div>
         )
         : <div>Loading..</div>;
