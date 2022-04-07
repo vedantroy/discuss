@@ -56,7 +56,7 @@ type FooterProps = {
 export default function({ activeHighlights, pageToHighlights }: FooterProps) {
     const pages = _(pageToHighlights)
         .keys()
-        // R/C bug :) -- (parseInt takes 2 params)
+        // R.C bug :) -- (parseInt takes 2 params)
         .map(k => parseInt(k))
         .sort()
         .value();
