@@ -1663,6 +1663,12 @@ html {
   }
 }
 
+.avatar.placeholder > div {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .btn.loading, .btn.loading:hover {
   pointer-events: none;
 }
@@ -1852,6 +1858,29 @@ html {
 
 .range:focus {
   outline: none;
+}
+
+.textarea {
+  flex-shrink: 1;
+  transition-property: color, background-color, border-color, fill, stroke, opacity, box-shadow, transform, filter, -webkit-text-decoration-color, -webkit-backdrop-filter;
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter, -webkit-text-decoration-color, -webkit-backdrop-filter;
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  padding-left: 1rem;
+  padding-right: 1rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  line-height: 2;
+  min-height: 3rem;
+  border-width: 1px;
+  border-color: hsl(var(--bc) / var(--tw-border-opacity));
+  --tw-border-opacity: 0;
+  --tw-bg-opacity: 1;
+  background-color: hsl(var(--b1) / var(--tw-bg-opacity));
+  border-radius: var(--rounded-btn, 0.5rem);
 }
 
 .btn.loading.btn-square:before, .btn.loading.btn-circle:before {
@@ -2140,6 +2169,35 @@ html {
   background-color: hsl(var(--b3, var(--b2)) / var(--tw-bg-opacity));
 }
 
+.textarea:focus {
+  outline: 2px solid hsla(var(--bc) / 0.2);
+  outline-offset: 2px;
+}
+
+.textarea-disabled, .textarea[disabled] {
+  cursor: not-allowed;
+  --tw-border-opacity: 1;
+  border-color: hsl(var(--b2, var(--b1)) / var(--tw-border-opacity));
+  --tw-bg-opacity: 1;
+  background-color: hsl(var(--b2, var(--b1)) / var(--tw-bg-opacity));
+  --tw-text-opacity: 0.2;
+}
+
+.textarea-disabled::-moz-placeholder, .textarea[disabled]::-moz-placeholder {
+  color: hsl(var(--bc) / var(--tw-placeholder-opacity));
+  --tw-placeholder-opacity: 0.2;
+}
+
+.textarea-disabled:-ms-input-placeholder, .textarea[disabled]:-ms-input-placeholder {
+  color: hsl(var(--bc) / var(--tw-placeholder-opacity));
+  --tw-placeholder-opacity: 0.2;
+}
+
+.textarea-disabled::placeholder, .textarea[disabled]::placeholder {
+  color: hsl(var(--bc) / var(--tw-placeholder-opacity));
+  --tw-placeholder-opacity: 0.2;
+}
+
 .min-h-8 {
   min-height: 2rem;
 }
@@ -2207,24 +2265,24 @@ html {
   left: 0px;
 }
 
-.left-\[-6px\] {
-  left: -6px;
-}
-
-.top-\[-6px\] {
-  top: -6px;
+.left-0 {
+  left: 0px;
 }
 
 .bottom-0 {
   bottom: 0px;
 }
 
-.left-0 {
-  left: 0px;
-}
-
 .right-0 {
   right: 0px;
+}
+
+.left-\[-6px\] {
+  left: -6px;
+}
+
+.top-\[-6px\] {
+  top: -6px;
 }
 
 .z-30 {
@@ -2237,6 +2295,11 @@ html {
 
 .z-20 {
   z-index: 20;
+}
+
+.mx-auto {
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .my-3 {
@@ -2252,12 +2315,20 @@ html {
   margin-left: 0.5rem;
 }
 
+.box-content {
+  box-sizing: content-box;
+}
+
 .flex {
   display: flex;
 }
 
 .grid {
   display: grid;
+}
+
+.h-64 {
+  height: 16rem;
 }
 
 .h-28 {
@@ -2278,6 +2349,10 @@ html {
 
 .max-h-24 {
   max-height: 6rem;
+}
+
+.w-full {
+  width: 100%;
 }
 
 .w-28 {
@@ -2316,8 +2391,16 @@ html {
   justify-content: center;
 }
 
+.gap-2 {
+  gap: 0.5rem;
+}
+
 .gap-4 {
   gap: 1rem;
+}
+
+.gap-y-2 {
+  row-gap: 0.5rem;
 }
 
 .overflow-auto {
@@ -2330,6 +2413,10 @@ html {
 
 .overflow-visible {
   overflow: visible;
+}
+
+.border {
+  border-width: 1px;
 }
 
 .border-none {
@@ -2374,6 +2461,11 @@ html {
 .bg-zinc-700 {
   --tw-bg-opacity: 1;
   background-color: rgb(63 63 70 / var(--tw-bg-opacity));
+}
+
+.px-2 {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
 }
 
 .pt-1 {
@@ -2465,6 +2557,32 @@ html {
 
 .duration-75 {
   transition-duration: 75ms;
+}
+
+/* This is kind of disgusting b/c -- it means the composer's styles are not self-contained
+   and will be loaded for every page.
+
+   We do this because we want to use this class on inputs and textareas
+*/
+
+.Border-Appearance {
+  margin: 1px;
+  -webkit-appearance: none;
+     -moz-appearance: none;
+          appearance: none;
+  border-width: 1px;
+  border-style: solid;
+  --tw-border-opacity: 1;
+  border-color: rgb(75 85 99 / var(--tw-border-opacity));
+}
+
+.Border-Appearance:focus {
+  margin: 0px;
+  border-width: 2px;
+  --tw-border-opacity: 1;
+  border-color: rgb(14 165 233 / var(--tw-border-opacity));
+  outline: 2px solid transparent;
+  outline-offset: 2px;
 }
 
 .hover\:shadow-md:hover {

@@ -9,7 +9,7 @@ type LoaderData = {
 
 export const loader: LoaderFunction = async ({ request }) => {
     await oAuthStrategy.checkSession(request, {
-        successRedirect: "/pdf",
+        successRedirect: "/pdf/123",
     });
     // If success, we won't get here
 
