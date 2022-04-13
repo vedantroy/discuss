@@ -1,6 +1,6 @@
 import _ from "lodash";
 import { useState } from "react";
-import { getIdxFromId } from "~/api-transforms/spanId";
+import { fromId } from "~/api-transforms/spanId";
 import { PostHighlight } from "../../types";
 
 type CardProps = {
@@ -36,7 +36,7 @@ type PageProps = {
 };
 
 const Page = ({ page, highlights, activeHighlights }: PageProps) => {
-    const ordered = highlights.sort((a, b) => getIdxFromId(a.anchorId) - getIdxFromId(b.anchorId));
+    const ordered = highlights.sort((a, b) => fromId(a.anchorId)[1] - fromId(b.anchorId)[1]);
 
     return (
         <>

@@ -1,7 +1,7 @@
 import * as pdfjs from "pdfjs-dist";
-import type { PDFDocumentProxy, PDFPageProxy, TextContent } from "pdfjs-dist/types/src/display/api";
+import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist/types/src/display/api";
 import { PageViewport } from "pdfjs-dist/types/src/display/display_utils";
-import { KeyboardEventHandler, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PageManager, { makeRenderQueues, PageState } from "../controller/PageManager";
 import Footer from "./Footer";
 import Page, { RenderState } from "./Page";
@@ -9,8 +9,9 @@ import Page, { RenderState } from "./Page";
 // TODO: check bundle size
 import { clamp, fill, range } from "lodash";
 import invariant from "tiny-invariant";
-import { PostHighlight } from "../../types";
-import { processSelection, SelectionContext } from "./selection";
+import { fromId, getPageTextId } from "~/api-transforms/spanId";
+import { PostHighlight, Rect } from "../../types";
+import { makeRects, processSelection, SelectionContext } from "./selection";
 
 pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
 
@@ -25,6 +26,12 @@ const NAV_KEYS = new Set(["ArrowLeft", "ArrowRight", "Delete", "Backspace"]);
 // set the new v_gap (doable, just not now ...)
 const V_GAP = 10;
 
+export type MouseUpContext = SelectionContext & {
+    scale: number;
+    rects: Rect[];
+    page: number;
+};
+
 type ViewerProps = {
     // We can't do anything till we have the document ...
     doc: PDFDocumentProxy;
@@ -34,7 +41,7 @@ type ViewerProps = {
     highlights: PostHighlight[];
     pageToHighlights: Record<number, PostHighlight[]>;
 
-    onSelection: (ctx: SelectionContext | null) => void;
+    onSelection: (ctx: MouseUpContext | null) => void;
 };
 
 const StartupState = {
@@ -215,13 +222,24 @@ function Viewer({ doc, firstPage, width, height, onSelection, highlights, pageTo
 
     // const scrollWidth = window.innerWidth - document.body.clientWidth;
 
+    const onMouseUp = useCallback(() => {
+        const ctx = processSelection(document.getSelection());
+        if (ctx) {
+            const { anchorNode, focusNode, anchorOffset, focusOffset } = ctx;
+            const [page, _] = fromId(anchorNode.id);
+            const pageTextId = getPageTextId(page);
+            const pageTextContainer = document.getElementById(pageTextId);
+            invariant(pageTextContainer, `id: ${pageTextId} not found`);
+            const { x, y } = pageTextContainer.getBoundingClientRect();
+            const rects = makeRects(anchorNode, focusNode, { x, y, anchorOffset, focusOffset });
+            onSelection({ ...ctx, rects, scale: viewport!!.scale, page });
+        } else onSelection(null);
+    }, [viewport]);
+
     return pm
         ? (
             <div
-                onMouseUp={() => {
-                    const ctx = processSelection(document.getSelection());
-                    onSelection(ctx);
-                }}
+                onMouseUp={onMouseUp}
                 style={{ height }}
                 className="flex flex-col overflow-hidden bg-zinc-400"
             >

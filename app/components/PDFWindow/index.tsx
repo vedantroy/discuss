@@ -2,12 +2,12 @@ import copy from "copy-to-clipboard";
 import _ from "lodash";
 import * as pdfjs from "pdfjs-dist";
 import { PDFDocumentProxy } from "pdfjs-dist";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import invariant from "tiny-invariant";
+import { toURLSearchParams } from "~/api-transforms/submitContext";
 import { getDeepLinkParams } from "./PDFViewer/display/deepLink";
-import { SelectionContext } from "./PDFViewer/display/selection";
-import Viewer from "./PDFViewer/display/ViewerInternal";
+import Viewer, { MouseUpContext } from "./PDFViewer/display/ViewerInternal";
 import { PostHighlight } from "./types";
 import useWindowDimensions from "./useWindowDimensions";
 
@@ -22,6 +22,13 @@ type ToastIds = {
 
 const HOTKEY_LINK = "l";
 const HOTKEY_POST = "p";
+
+const toNum = (s: string) => {
+    const noPx = s.slice(0, -"px".length);
+    const f = parseFloat(noPx);
+    invariant(!isNaN(f), `invalid style: ${s}`);
+    return Math.round(f);
+};
 
 export default function({ url, highlights }: PDFWindowProps) {
     const [loaded, setLoaded] = useState(false);
@@ -39,11 +46,12 @@ export default function({ url, highlights }: PDFWindowProps) {
     }, []);
 
     const { current: toastIds } = useRef<ToastIds>({ hotkey: null });
-    const selectionContextRef = useRef<SelectionContext | null>(null);
+    const selectionContextRef = useRef<MouseUpContext | null>(null);
 
     // Think this is simpler than react-hotkeys ...?
     if (typeof window !== "undefined") {
-        window.onkeyup = e => {
+        // TODO: `useCallback` this
+        window.onkeyup = useCallback((e: KeyboardEvent) => {
             if (toastIds.hotkey !== null) {
                 const { key } = e;
                 const isLink = key === HOTKEY_LINK;
@@ -66,9 +74,50 @@ export default function({ url, highlights }: PDFWindowProps) {
                 }
 
                 if (isPost) {
+                    let left = Infinity;
+                    let right = -Infinity;
+                    let top = Infinity;
+                    let bottom = -Infinity;
+
+                    for (const { x, y, width, height } of ctx.rects) {
+                        left = Math.min(x, left);
+                        right = Math.max(x + width, right);
+                        bottom = Math.max(y + height, bottom);
+                        top = Math.min(y, top);
+                    }
+
+                    const scale = (n: number) => Math.round(n * (1 / ctx.scale));
+
+                    const params = new URLSearchParams(toURLSearchParams({
+                        left: scale(left),
+                        top: scale(top),
+                        width: scale(right - left),
+                        height: scale(bottom - top),
+                        rects: ctx.rects.map(({ x, y, width, height }) => ({
+                            x: scale(x),
+                            y: scale(y),
+                            width: scale(width),
+                            height: scale(height),
+                        })),
+                        page: ctx.page,
+                    }));
+
+                    console.log(params);
+
+                    const url = `${location.protocol}//${location.host}/pdf/submit`;
+                    const urlWithParams = `${url}?${params.toString()}`;
+                    window.open(urlWithParams, "_blank")!!.focus();
+
+                    // TODO: Might be able to merge these 2 lines
+                    // We should generate a preview link
+
+                    // we need to get the viewbox of the selection
+                    // this time: plan
+                    // 1. we iterate over all nodes to find x/y
+                    // 2. we adjust for scale
                 }
             }
-        };
+        }, []);
     }
 
     if (!loaded) return <div>loading...</div>;
@@ -85,7 +134,7 @@ export default function({ url, highlights }: PDFWindowProps) {
                 width={width}
                 height={height}
                 doc={docRef.current!!}
-                onSelection={(ctx: SelectionContext | null) => {
+                onSelection={(ctx: MouseUpContext | null) => {
                     selectionContextRef.current = ctx;
                     const selectionRemoved = ctx === null;
                     if (toastIds.hotkey !== null) {

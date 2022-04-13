@@ -1,3 +1,15 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* This is kind of disgusting b/c -- it means the composer's styles are not self-contained
+   and will be loaded for every page.
+
+   We do this because we want to use this class on inputs and textareas
+*/
+
+.Border-Appearance {
+        /* We add 1px to the border on focus. To prevent the div from expanding
+        we add a margin (when unfocused) which we remove (when focused) */
+	@apply m-[1px] focus:m-0 appearance-none border-solid border-gray-400 focus:border-sky-500 border focus:border-2 focus:outline-none
+}

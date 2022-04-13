@@ -10,7 +10,7 @@ import React, { memo, useLayoutEffect, useMemo } from "react";
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import invariant from "tiny-invariant";
-import { toId } from "~/api-transforms/spanId";
+import { getPageTextId, toId } from "~/api-transforms/spanId";
 import Flatbush from "~/vendor/flatbush";
 import { PostHighlight, Rect } from "../../types";
 import { Comment, makeSelectionRegex, stringifyComments } from "./deepLink";
@@ -144,7 +144,7 @@ function Page(
     const [internalState, setInternalState] = useState<InternalState>(InternalState.CANVAS_NONE);
     const { width, height } = viewport;
 
-    const pageTextId = `page-${pageNum}`;
+    const pageTextId = getPageTextId(pageNum);
 
     useEffect(() => {
         if (!textInfo?.html) return;

@@ -1,3 +1,4 @@
+import { PageViewport } from "pdfjs-dist";
 import invariant from "tiny-invariant";
 import { Rect } from "../../types";
 
@@ -62,6 +63,7 @@ export function makeRects(
 
 export type SelectionContext = {
     text: string;
+    selectedChildren: HTMLSpanElement[];
     anchorNode: HTMLElement;
     focusNode: HTMLElement;
     anchorOffset: number;
@@ -85,20 +87,28 @@ export function processSelection(s: Selection | null): null | SelectionContext {
     let start: HTMLSpanElement | null = null;
     let end: HTMLSpanElement | null = null;
 
+    const selectedChildren = [];
+
     for (const el of children) {
         // only spans contain text
         if (el instanceof HTMLSpanElement && s.containsNode(el, true)) {
+            // all selected elements are contiguous
             if (!start) start = el;
             end = el;
-            console.log("not skip");
-            // all selected elements are contiguous
-        } else if (el instanceof HTMLSpanElement) {
-            console.log("skip");
+            selectedChildren.push(el);
         }
     }
 
     invariant(start, `invalid start`);
     invariant(end, `invalid end`);
 
-    return { text, anchorNode: start, focusNode: end, anchorOffset: s.anchorOffset, focusOffset: s.focusOffset };
+    return {
+        text,
+        anchorNode: start,
+        focusNode: end,
+        anchorOffset: s.anchorOffset,
+        focusOffset: s.focusOffset,
+        // ancestor: c.nodeType === Node.TEXT_NODE ? c.parentElement!! : c as HTMLElement,
+        selectedChildren,
+    };
 }

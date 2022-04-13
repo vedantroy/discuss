@@ -5,7 +5,11 @@ export function toId(page: number, n: number): string {
     return `t${page}-${n}`;
 }
 
-export function getIdxFromId(id: string): number {
-    const [_, n] = id.split("-");
-    return parseInt(n);
+export function fromId(id: string): [number, number] {
+    const [page, n] = id.split("-");
+    return [parseInt(page.slice(1)), parseInt(n)];
+}
+
+export function getPageTextId(page: number): string {
+    return `page-text-${page}`;
 }
