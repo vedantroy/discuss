@@ -1,3 +1,148 @@
+# 16-04-2022
+## thesis
+- We can make ultra-books by taking every question someone has and inlining it into the book
+  - Legal document
+  - HW assignments
+  - Textbooks
+- I want to add a social media aspect?
+  - (is this crock-pot thinking ... like )
+- The thing to do to combat crock-pot thinking is as follows
+ 1. make hypothesis
+ 2. test hypothesis
+ 3. only implementing marketing features that are not *abstract*
+
+Difference between social network & Q/A site?
+- Primary purpose is Q&A, we want ultra-good learning platforms
+- Social network exists for;
+
+STOP THINKING IN ABSTRACT DRILL DOWN TO CONCRETE SCENARIOS! ALWAYS!
+(counterpoint: not always bad to throw features in & see if cambrian explosion of unexpected interactions happen)
+
+1st plan:
+- Focus on intimate groups (personal book club)
+  - Why?
+    1. Potential explosion of growth if people upload illegal content to read with friends
+    2. **That's what we need for the summer**
+
+1st concrete scenario:
+- ZK summer group
+  - Objective: To understand the entire ZK tech stack
+  - Care about social? no
+    - Possibly to see who the other interesting ZK people are
+    - Already known b/c are in shared book club
+  - Experience: small, intimate
+  - 
+- User book club
+  - pass
+- Piracy
+
+more vague thoughts:
+- learning is inherently collaborative ...
+  - you are trying to understand the same thing; there is high intellectual compatability; good become dating site LMAOOO
+- 
+
+Data model (**this startup is kind of just a discord feature**):
+- Clubs can contain multiple documents
+- People must join clubs to read the contained documents
+- Public clubs (have a public invite link) and private clubs (specialized invite link)
+-  Public & Private can reference public posts directly
+ - if a post is deleted, ignore tht problem for now
+- You can see posts at a top level
+- You can link to (public) posts at a top level
+  - 
+
+Ok. More thoughts. I fucking. hate. SQL.
+See: https://stackoverflow.com/questions/71898968/how-to-query-parent-child-table-in-one-query
+
+This is a startup. My job is not to do SQL.
+I guess think about it like this. I have a finite amount of time on this earth.
+I do not want to spend this time on earth developing this application. I want to spend it hanging out! Spending time developing this application is *necessary cost*. I should ship as fast as possible.
+
+At the same time, I want to be happy. & writing unclean SQL makes me very not happy. I should just use edgedb. Restrict the entire data layer to a "data.ts" file (or something like that). If I stick all queries in there, then I should be golden.
+
+It is not worth learning SQL. I do not want a job where I become a SQL monkey. I'll just use edgedb & then if at some point it breaks I'll deal with the clusterfuck. But roughly; I expect edgedb to be good for my first 500K users and if I have to migrate then, that's fine. It'll be annoying but doable I think.
+
+url scheme:
+
+DB Schema 2:
+
+```
+model Club {
+  club_id
+  name: string
+  public: bool
+  members: Users[]
+  documents: Document[]
+}
+
+model Document {
+  document_id
+  name: string
+  type: DocumentType
+}
+
+// Reference table
+model DocumentType {
+  type_id
+  name: string
+}
+
+```
+
+---
+
+Writing out DB scheme. Going to keep it fast & sloppy while I iterate:
+Supabase reasoning: It's like Mongo but better
+- terrible, untyped developer experience
+- but super fast dev ex
+- it's pg-based (unlike mongo) so we can switch to prisma w/o too much issue later
+
+```
+// think about what to store
+// e.g -- we probably want to store individual votes
+// (calculate fraud, see what someone voted on, etc.)
+// avoid computed columns -- we can cache em later
+// MVP this shit ...
+// I want rust style enums in a database !!
+
+model User {
+  displayName: string
+  description: string
+  // the other fields we care about ...
+
+  votes: Vote[]
+}
+
+model Posts {
+  title: string;
+  content: string;
+  score: number;
+  vote: Vote[]
+}
+
+model Comments {
+}
+
+model Answers {
+  content: string;
+  post: PostId
+  vote: Vote[]
+}
+
+model Votes {
+  id: Id
+  userId: UserId
+  postId: PostId
+  time: Time
+  up: bool
+  //voteType: VoteTypeId
+}
+
+//model VoteType {
+//  id: VoteTypeId
+//}
+```
+
 # 03-04-2022
 
 - I feel bad about my regexp based solution to commenting. why?

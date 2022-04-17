@@ -248,7 +248,7 @@ function Page(
             case RenderState.NONE:
                 switch (internal) {
                     case InternalState.CANVAS_DONE:
-                    case InternalState.CANVAS_RENDERING:
+                    case InternalState.CANVAS_RERENDERING:
                     case InternalState.CANVAS_RENDERING:
                         assertInvalid();
                 }

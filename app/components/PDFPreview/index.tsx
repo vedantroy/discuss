@@ -31,7 +31,7 @@ function Page({ ctx, page, containerWidth }: PageProps) {
     // The width of the excerpt is given @ 1x scale
     // If the excerpt is rendered @ 5px & the container width is 10px
     // We need to render the page @ 2x zoom, so the excerpt will have 10px width
-    const scaleMultiplier = Math.min(containerWidth / sampleW, 4);
+    const scaleMultiplier = Math.min(containerWidth / sampleW, 2);
     const scale = (x: number) => x * scaleMultiplier;
     const destW = scale(sampleW);
     const destH = scale(sampleH);
@@ -71,16 +71,14 @@ function Page({ ctx, page, containerWidth }: PageProps) {
 
                 const { current } = destCanvasRef;
                 const ctx = current!!.getContext("2d");
-                console.log(destW, containerWidth);
                 ctx!!.drawImage(
                     canvas,
                     // sx
                     srcLeft,
                     // sy
                     srcTop,
-                    // sw
+                    // sw -- always take the full width of the container
                     containerWidth,
-                    // destW,
                     // sh
                     destH,
                     // dx
