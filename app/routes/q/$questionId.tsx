@@ -1,7 +1,3 @@
-// what should be on here?
-// a realization: SO UI isn't optimized well
-// it definitely gets the job done -- but -- (for example) the refresh on sorting posts
-// is jarring as fuck ...
 
 import { ActionFunction, Form, json, LoaderFunction, useLoaderData } from "remix";
 import POST_CSS from "~/../styles/post.css";
@@ -18,7 +14,9 @@ const VoteAction = {
 } as const;
 type VoteAction = typeof VoteAction[keyof typeof VoteAction];
 
-export const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({ request, params }) => {
+    console.log("PARAMS")
+    console.log(params.questionId)
 
     // extract the vote
     const formData = await request.formData();
@@ -30,13 +28,16 @@ export const action: ActionFunction = async ({ request }) => {
         case VoteAction.DOWN:
             break;
     }
-    console.log(`THE DATABASE IS NOW: ${JSON.stringify(db, null, 2)}`);
+    //console.log(`THE DATABASE IS NOW: ${JSON.stringify(db, null, 2)}`);
     return db;
 };
 
 export const loader: LoaderFunction = async ({ request, context, params }) => {
-    console.log(`LOADER IS GETTING CALLED WITH: ${JSON.stringify(db, null, 2)}`);
-    return json(db);
+    console.log("PARAMS")
+    console.log(params.questionId)
+    return json({})
+    //console.log(`LOADER IS GETTING CALLED WITH: ${JSON.stringify(db, null, 2)}`);
+    //return json(db);
 };
 
 function Arrow({ up, active }: { up: boolean; active: boolean }) {

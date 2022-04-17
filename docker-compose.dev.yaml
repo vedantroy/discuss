@@ -1,0 +1,12 @@
+version: "3"
+services:
+  edgedb:
+    image: edgedb/edgedb
+    environment:
+      EDGEDB_SERVER_SECURITY: insecure_dev_mode
+    volumes:
+      - "./edgedb/dbschema:/dbschema"
+      - "./edgedb/credentials:/root/.config/edgedb/credentials"
+      - "./.data:/var/lib/edgedb/data"
+    ports:
+      - "5656"
