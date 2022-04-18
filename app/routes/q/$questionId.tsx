@@ -1,8 +1,8 @@
-
 import { ActionFunction, Form, json, LoaderFunction, useLoaderData } from "remix";
 import POST_CSS from "~/../styles/post.css";
+import { authenticator } from "~/server/auth.server";
+import db, { e } from "~/server/edgedb.server";
 import colors from "~/vendor/tailwindcss/colors";
-import db, { e } from "~/server/edgedb.server"
 
 export function links() {
     return [{ rel: "stylesheet", href: POST_CSS }];
@@ -15,29 +15,29 @@ const VoteAction = {
 type VoteAction = typeof VoteAction[keyof typeof VoteAction];
 
 export const action: ActionFunction = async ({ request, params }) => {
-    console.log("PARAMS")
-    console.log(params.questionId)
+    const user = authenticator.isAuthenticated(request);
+    const { questionId } = params;
 
     // extract the vote
     const formData = await request.formData();
     const { _action } = Object.fromEntries(formData) as { _action: VoteAction };
     switch (_action) {
         case VoteAction.UP:
-            //e.insert(e.Vote, { up: true, post:  })
+            // e.insert(e.Vote, { up: true, post:  })
             break;
         case VoteAction.DOWN:
             break;
     }
-    //console.log(`THE DATABASE IS NOW: ${JSON.stringify(db, null, 2)}`);
+    // console.log(`THE DATABASE IS NOW: ${JSON.stringify(db, null, 2)}`);
     return db;
 };
 
 export const loader: LoaderFunction = async ({ request, context, params }) => {
-    console.log("PARAMS")
-    console.log(params.questionId)
-    return json({})
-    //console.log(`LOADER IS GETTING CALLED WITH: ${JSON.stringify(db, null, 2)}`);
-    //return json(db);
+    console.log("PARAMS");
+    console.log(params.questionId);
+    return json({});
+    // console.log(`LOADER IS GETTING CALLED WITH: ${JSON.stringify(db, null, 2)}`);
+    // return json(db);
 };
 
 function Arrow({ up, active }: { up: boolean; active: boolean }) {
