@@ -11,7 +11,8 @@
     "**/public",
     "**/node_modules",
     "**/*-lock.json",
-    "**/build"
+    "**/build",
+    "**/.data"
   ],
   "plugins": [
     "https://plugins.dprint.dev/typescript-0.64.2.wasm",

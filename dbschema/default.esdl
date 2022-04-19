@@ -68,4 +68,13 @@ module default {
 		required link user -> User;
 		required link post -> Post;
 	}
+
+
+	# Why use Redis, when we can just use the database?
+	type Pair {
+	  required property key -> str {
+	  	constraint exclusive;
+	  }
+	  required property value -> str;
+	}
 }
