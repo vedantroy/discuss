@@ -1,28 +1,79 @@
 // TODO: Do we need to do CSRF protection here?
-import { ActionFunction, Form, json, LoaderFunction, redirect, useLoaderData } from "remix";
+import { withYup } from "@remix-validated-form/with-yup";
+import { updateSvg } from "jdenticon";
+import { useEffect, useState } from "react";
+import { ActionFunction, json, LoaderFunction, redirect, useLoaderData } from "remix";
 import { SocialsProvider } from "remix-auth-socials";
+import { useField, ValidatedForm, validationError } from "remix-validated-form";
+import invariant from "tiny-invariant";
+import * as yup from "yup";
 import Input from "~/components/input";
 import { getParam } from "~/route-utils/params";
 import { authenticator, sessionStorage } from "~/server/auth.server";
-import { updateSvg } from "jdenticon"
-import { useEffect, useState } from "react";
+
+function makeConsecutiveChecker(char: string, n: number, prefix: string) {
+    invariant(char.length === 1, `not character: ${char}`);
+    return {
+        validator: (_s: string | undefined) => {
+            // Yes, _s can be undefined (not sure why)
+            if (_s === undefined) return false;
+            const s = _s as string;
+            let cnt = 0;
+            for (const c of s) {
+                if (c === char) cnt++;
+                else cnt = 0;
+                if (cnt === n + 1) return false;
+            }
+            return true;
+        },
+        msg: `${prefix} cannot have more than ${n} consecutive ${char === " " ? "spaces" : `${char}`}`,
+    };
+}
+
+const PREFIX = "Display name";
+const { validator: hypenValidator, msg: hypenMsg } = makeConsecutiveChecker("-", 1, PREFIX);
+const { validator: underscoreValidator, msg: underscoreMsg } = makeConsecutiveChecker("_", 1, PREFIX);
+const { validator: spaceValidator, msg: spaceMsg } = makeConsecutiveChecker(" ", 1, PREFIX);
+
+const INPUT_DISPLAY_NAME = "displayName";
+const DISPLAY_MIN = 3;
+const DISPLAY_MAX = 30;
+const DISPLAY_NAME_REQUIREMENTS =
+    `Display name must be between ${DISPLAY_MIN} & ${DISPLAY_MAX} characters and only contain alphanumeric / hyphen / underscore characters`;
+const validator = withYup(
+    yup.object({
+        [INPUT_DISPLAY_NAME]: yup
+            .string()
+            .required()
+            .label("Display Name")
+            .trim()
+            .min(3, DISPLAY_NAME_REQUIREMENTS)
+            .max(30, DISPLAY_NAME_REQUIREMENTS)
+            .matches(/^[a-z0-9\s_\-]+$/i, DISPLAY_NAME_REQUIREMENTS)
+            .test("whitespace", spaceMsg, spaceValidator)
+            .test("underscore", underscoreMsg, underscoreValidator)
+            .test("hyphen", hypenMsg, hypenValidator),
+    }),
+);
 
 type LoaderData = {
     displayName: string;
 };
 
 export let action: ActionFunction = async ({ request, params }) => {
-    const provider = getParam(params, "provider")
+    const provider = getParam(params, "provider");
     const userData = await authenticator.authenticate(provider, request);
     if (userData.meta.userExists) {
-        throw new Error(`User already exists: can't re-create it`)
+        throw new Error(`User already exists: can't re-create it`);
     }
-    const formData = Object.fromEntries(await request.formData())
-    console.log(formData)
+    const fieldValues = await validator.validate(await request.formData());
+    if (fieldValues.error) return validationError(fieldValues.error);
+    const displayName = fieldValues.data[INPUT_DISPLAY_NAME];
+    console.log(displayName);
 };
 
 export let loader: LoaderFunction = async ({ request, params }) => {
-    const provider = getParam(params, "provider")
+    const provider = getParam(params, "provider");
     // There's something going on here that prevents us from getting forged
     // Google identities (not sure what it is) (something related to OAuthV2 state parameter ??)
     // TODO: I should understand this, otherwise someone could (maybe??) fill out the DB with forged Google identities?
@@ -46,35 +97,54 @@ export let loader: LoaderFunction = async ({ request, params }) => {
     return redirect("/login");
 };
 
-const cleanDisplayName = (name: string) => name.trim()
+type MyInputProps = {
+    name: string;
+};
+type InputProps = React.DetailedHTMLProps<React.InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>;
+export const DisplayNameInput = ({ name, ...props }: MyInputProps & InputProps) => {
+    const { error, getInputProps } = useField(name);
+    return (
+        <div>
+            <Input className="text-base py-1 px-1" {...props} {...getInputProps({ id: name })} />
+            {error && <div className="text-xs mt-0.5 text-rose-600">{error}</div>}
+        </div>
+    );
+};
 
-const DENTICON_ID = "jsdenticon"
-const INPUT_DISPLAY_NAME = "displayName"
+const DENTICON_ID = "jsdenticon";
 
 export default function() {
     const data = useLoaderData<LoaderData>();
-    const [displayName, setDisplayName] = useState(data.displayName)
+    const [displayName, setDisplayName] = useState(data.displayName);
     useEffect(() => {
         // If the SVG doesn't exist, this throws (which is fine)
         // Prevent input from being treated as truncated hash string??
         // See: https://github.com/dmester/jdenticon/issues/36
-        updateSvg(`#${DENTICON_ID}`, '!' + displayName)
-    }, [displayName])
+        updateSvg(`#${DENTICON_ID}`, "!" + displayName);
+    }, [displayName]);
     return (
         <div className="flex flex-col items-center justify-center w-full h-screen bg-gray-200">
             <div className="w-full mx-0 my-auto box-border card card-compact max-w-[50vw] bg-white shadow-xl">
                 <div className="card-body gap-0">
-                    <Form method="post" className="flex flex-col">
+                    <ValidatedForm
+                        defaultValues={{ displayName }}
+                        validator={validator}
+                        method="post"
+                        className="flex flex-col"
+                    >
                         <label className="font-bold text-base">Display name</label>
                         <div className="text-sm text-gray-500 mb-1">This is shown on posts and comments</div>
-                        <Input name={INPUT_DISPLAY_NAME} className="text-base py-1 px-1" defaultValue={displayName} onChange={e => setDisplayName(e.target.value)}></Input>
+                        <DisplayNameInput
+                            name={INPUT_DISPLAY_NAME}
+                            onChange={e => setDisplayName(e.target.value)}
+                        />
                         <label className="font-bold text-base mt-6">Profile Picture</label>
                         <div className="flex flex-row">
                             <svg id={DENTICON_ID} width={96} height={96}></svg>
                             <div>TODO: Support other propic options</div>
                         </div>
                         <button type="submit" className="btn mt-6">Create</button>
-                    </Form>
+                    </ValidatedForm>
                 </div>
             </div>
         </div>

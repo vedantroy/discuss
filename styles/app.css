@@ -13,3 +13,13 @@
         we add a margin (when unfocused) which we remove (when focused) */
 	@apply m-[1px] focus:m-0 appearance-none border-solid border-gray-400 focus:border-sky-500 border focus:border-2 focus:outline-none
 }
+
+/* This is fussy on mobile browsers
+   https://github.com/mvasin/react-div-100vh
+   https://stackoverflow.com/questions/37112218/css3-100vh-not-constant-in-mobile-browser
+html, body {
+        min-height: 100vh;
+        margin: 0;
+        height: 100%;
+}
+*/
