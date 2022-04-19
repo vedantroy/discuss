@@ -35,7 +35,7 @@ export const loader: LoaderFunction = async ({ request }) => {
         }
     }
 
-    invariant(!userData, `user is authenticated`);
+    invariant(!userData?.meta.userExists, `user is authenticated`);
     // Show the user the login screen (with an error, if there was one)
     const error = session.get(
         authenticator.sessionErrorKey,

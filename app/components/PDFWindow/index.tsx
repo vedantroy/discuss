@@ -102,7 +102,7 @@ export default function({ url, highlights }: PDFWindowProps) {
                         page: ctx.page,
                     }));
 
-                    const url = `${location.protocol}//${location.host}/pdf/submit`;
+                    const url = `${location.protocol}//${location.host}/d/pdf/submit`;
                     const urlWithParams = `${url}?${params.toString()}`;
                     window.open(urlWithParams, "_blank")!!.focus();
 

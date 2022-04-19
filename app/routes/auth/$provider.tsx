@@ -1,12 +1,16 @@
 import { ActionFunction, LoaderFunction, redirect } from "remix";
-import invariant from "tiny-invariant";
 import { authenticator } from "~/server/auth.server";
+import { getParam } from "~/route-utils/params";
 
-export let loader: LoaderFunction = () => {
-    return redirect("/login");
+export let loader: LoaderFunction = async ({ request, params }) => {
+   const provider = getParam(params, "provider");
+   const userData = await authenticator.authenticate(provider, request)
+   if (!userData.meta.userExists) {
+       return redirect(`/auth/${provider}/callback`)
+   }
+   return redirect("/login");
 };
 
-export let action: ActionFunction = ({ request, params }) => {
-    invariant(params.provider, "provider is required");
-    return authenticator.authenticate(params.provider, request);
+export let action: ActionFunction = async ({ request, params }) => {
+    return authenticator.authenticate(getParam(params, "provider"), request);
 };
