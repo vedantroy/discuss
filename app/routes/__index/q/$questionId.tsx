@@ -15,7 +15,7 @@ const VoteAction = {
 type VoteAction = typeof VoteAction[keyof typeof VoteAction];
 
 export const action: ActionFunction = async ({ request, params }) => {
-    const user = authenticator.isAuthenticated(request, { successRedirect: null });
+    const user = authenticator.isAuthenticated(request);
     const { questionId } = params;
 
     // extract the vote

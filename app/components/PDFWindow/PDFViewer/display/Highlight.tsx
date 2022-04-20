@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Rect } from "../../types";
 
 type HighlightProps = {
@@ -7,7 +6,7 @@ type HighlightProps = {
     active: boolean;
 };
 
-const highlight: React.FC<HighlightProps> = ({ rects, id, active }) => {
+const highlight: React.FC<HighlightProps> = ({ rects, active }) => {
     return (
         <>
             {rects.map(({ x, y, width, height }, i) => (

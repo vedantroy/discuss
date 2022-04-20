@@ -1,5 +1,4 @@
 // This is a test route
-
 import { LoaderFunction, redirect } from "remix";
 import { getSession, setSessionHeader } from "~/route-utils/session";
 import { authenticator, SESSION_REDIRECT_KEY, sessionStorage } from "~/server/auth.server";
