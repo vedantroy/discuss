@@ -6,7 +6,7 @@ import { getUserFromGoogleIdentity } from "./queries.server";
 
 export const sessionStorage = createCookieSessionStorage({
     cookie: {
-        name: "sb",
+        name: "auth",
         httpOnly: true,
         path: "/",
         sameSite: "lax",
@@ -25,7 +25,6 @@ declare global {
 }
 
 export const SESSION_REDIRECT_KEY = "auth:redirect";
-type SessionError = { type: "generic" } & GenericRedirect;
 type GenericRedirect = {
     route: string;
 };

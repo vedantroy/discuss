@@ -1,7 +1,7 @@
 // TODO: Do we need to do CSRF protection here?
 import { withYup } from "@remix-validated-form/with-yup";
 import { updateSvg } from "jdenticon";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ActionFunction, json, LoaderFunction, redirect, useLoaderData } from "remix";
 import { SocialsProvider } from "remix-auth-socials";
 import { useField, ValidatedForm, validationError } from "remix-validated-form";
@@ -9,7 +9,9 @@ import invariant from "tiny-invariant";
 import * as yup from "yup";
 import Input from "~/components/input";
 import { getParam } from "~/route-utils/params";
-import { authenticator, sessionStorage } from "~/server/auth.server";
+import { getSession } from "~/route-utils/session";
+import { authenticator, sessionStorage, UserSession } from "~/server/auth.server";
+import { insertUserWithGoogleIdentity } from "~/server/queries.server";
 
 function makeConsecutiveChecker(char: string, n: number, prefix: string) {
     invariant(char.length === 1, `not character: ${char}`);
@@ -69,7 +71,33 @@ export let action: ActionFunction = async ({ request, params }) => {
     const fieldValues = await validator.validate(await request.formData());
     if (fieldValues.error) return validationError(fieldValues.error);
     const displayName = fieldValues.data[INPUT_DISPLAY_NAME];
-    console.log(displayName);
+
+    let userId: string;
+    switch (provider) {
+        case SocialsProvider.GOOGLE:
+            const iden = userData.meta.google;
+            invariant(iden, `Missing google identity`);
+            const { profile: { displayName: googDisplayName, _json: { email, sub } } } = iden;
+            userId = await insertUserWithGoogleIdentity({
+                user: { displayName, email },
+                google: { sub, email, displayName: googDisplayName },
+            });
+            break;
+        default:
+            throw new Error(`Unsupported provider: ${provider}`);
+    }
+
+    const session = await getSession(request);
+    const newSession: UserSession = {
+        meta: { userExists: true },
+        user: { shortId: userId },
+    };
+    session.set(authenticator.sessionKey, newSession);
+    return redirect(`/login`, {
+        headers: {
+            "Set-Cookie": await sessionStorage.commitSession(session),
+        },
+    });
 };
 
 export let loader: LoaderFunction = async ({ request, params }) => {
@@ -79,12 +107,13 @@ export let loader: LoaderFunction = async ({ request, params }) => {
     // TODO: I should understand this, otherwise someone could (maybe??) fill out the DB with forged Google identities?
     const userData = await authenticator.authenticate(provider, request);
 
+    // We need to save the session always; Cases:
+    // 1. We come from $provider.tsx (userData.meta.userExists === true)
+    //    We need to save that the user is logged in
+    const session = await getSession(request);
+    session.set(authenticator.sessionKey, userData);
+
     if (!userData.meta.userExists) {
-        const session = await sessionStorage.getSession(
-            request.headers.get("Cookie"),
-        );
-        // We (might) need to manually update the session
-        session.set(authenticator.sessionKey, userData);
         switch (provider) {
             case SocialsProvider.GOOGLE:
                 return json({
@@ -94,18 +123,32 @@ export let loader: LoaderFunction = async ({ request, params }) => {
                 throw new Error(`unsupported provider: ${provider}`);
         }
     }
-    return redirect("/login");
+
+    return redirect("/login", {
+        headers: {
+            "Set-Cookie": await sessionStorage.commitSession(session),
+        },
+    });
 };
 
 type MyInputProps = {
     name: string;
+    onChange: (value: React.ChangeEvent<HTMLInputElement>) => void;
 };
-type InputProps = React.DetailedHTMLProps<React.InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>;
-export const DisplayNameInput = ({ name, ...props }: MyInputProps & InputProps) => {
+export const DisplayNameInput = ({ name, onChange }: MyInputProps) => {
     const { error, getInputProps } = useField(name);
+    // @ts-expect-error - I'm not sure why there's a type error here
+    const props = getInputProps({ id: name });
+    const og = props.onChange;
+    og
+        ? props.onChange = (e) => {
+            onChange(e);
+            og(e);
+        }
+        : props.onChange = onChange;
     return (
         <div>
-            <Input className="text-base py-1 px-1" {...props} {...getInputProps({ id: name })} />
+            <Input className="w-full text-base py-1 px-1" {...props} />
             {error && <div className="text-xs mt-0.5 text-rose-600">{error}</div>}
         </div>
     );
@@ -117,6 +160,7 @@ export default function() {
     const data = useLoaderData<LoaderData>();
     const [displayName, setDisplayName] = useState(data.displayName);
     useEffect(() => {
+        console.log("changing displayName");
         // If the SVG doesn't exist, this throws (which is fine)
         // Prevent input from being treated as truncated hash string??
         // See: https://github.com/dmester/jdenticon/issues/36

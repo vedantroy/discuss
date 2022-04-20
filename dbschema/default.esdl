@@ -24,24 +24,31 @@ module default {
 
 	type User {
 		required property displayName -> str;
+		required property email -> str;
 		required property shortId -> str {
 			constraint exclusive;
 		}
+		# null = use default (jsdenticon)
+		property image -> str;
 		multi link votes := .<user[is Vote];
 		multi link answers := .<user[is Answer];
-		link googleIdentity := .<user[is GoogleIdentity];
+		multi link identities := .<user[is Identity];
 	}
 
-	type GoogleIdentity {
+	abstract type Identity {
+		required link user -> User {
+			constraint exclusive;
+		}
+	}
+
+	type GoogleIdentity extending Identity  {
 		required property sub -> str {
 			constraint exclusive;
 		}
 		required property displayName -> str;
 		required property email -> str;
-		required link user -> User;
 	}
 	
-
 	type Post {
 		multi link votes := .<post[is Vote];
 		multi link answers := .<post[is Answer];

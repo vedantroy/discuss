@@ -1,3 +1,18 @@
+# 19-04-2022
+
+How to generate auto-incrementing integer:
+(I'm gonna use a nano-id instead b/c it will prevent iterating over all users)
+
+```
+scalar type MyId extending std::sequence;
+
+type MyType {
+  required property my_id -> MyId {
+    constraint exclusive;
+  }
+}
+```
+
 # 18-04-2022
 
 I must say. remix is great.
