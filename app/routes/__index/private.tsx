@@ -1,7 +1,7 @@
 // This is a test route
 
 import { LoaderFunction, redirect } from "remix";
-import { getSession } from "~/route-utils/session";
+import { getSession, setSessionHeader } from "~/route-utils/session";
 import { authenticator, SESSION_REDIRECT_KEY, sessionStorage } from "~/server/auth.server";
 
 export const loader: LoaderFunction = async ({ request, params }) => {
@@ -10,9 +10,7 @@ export const loader: LoaderFunction = async ({ request, params }) => {
         const session = await getSession(request);
         session.set(SESSION_REDIRECT_KEY, request.url);
         return redirect("/login", {
-            headers: {
-                "Set-Cookie": await sessionStorage.commitSession(session),
-            },
+            headers: await setSessionHeader(session),
         });
     }
     return null;

@@ -9,8 +9,8 @@ import invariant from "tiny-invariant";
 import * as yup from "yup";
 import Input from "~/components/input";
 import { getParam } from "~/route-utils/params";
-import { getSession } from "~/route-utils/session";
-import { authenticator, sessionStorage, UserSession } from "~/server/auth.server";
+import { getSession, setSessionHeader } from "~/route-utils/session";
+import { authenticator, UserSession } from "~/server/auth.server";
 import { insertUserWithGoogleIdentity } from "~/server/queries.server";
 
 function makeConsecutiveChecker(char: string, n: number, prefix: string) {
@@ -94,9 +94,7 @@ export let action: ActionFunction = async ({ request, params }) => {
     };
     session.set(authenticator.sessionKey, newSession);
     return redirect(`/login`, {
-        headers: {
-            "Set-Cookie": await sessionStorage.commitSession(session),
-        },
+        headers: await setSessionHeader(session),
     });
 };
 
@@ -118,16 +116,14 @@ export let loader: LoaderFunction = async ({ request, params }) => {
             case SocialsProvider.GOOGLE:
                 return json({
                     displayName: userData.meta.google!!.profile.displayName,
-                }, { headers: { "Set-Cookie": await sessionStorage.commitSession(session) } });
+                }, { headers: await setSessionHeader(session) });
             default:
                 throw new Error(`unsupported provider: ${provider}`);
         }
     }
 
     return redirect("/login", {
-        headers: {
-            "Set-Cookie": await sessionStorage.commitSession(session),
-        },
+        headers: await setSessionHeader(session),
     });
 };
 
