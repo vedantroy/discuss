@@ -8,7 +8,7 @@ export const loader: LoaderFunction = async ({ request, params }) => {
     const userData = await authenticator.isAuthenticated(request);
     if (!userData || !userData?.meta.userExists) {
         const session = await getSession(request);
-        session.set(SESSION_REDIRECT_KEY, request.url);
+        session.flash(SESSION_REDIRECT_KEY, request.url);
         return redirect("/login", {
             headers: await setSessionHeader(session),
         });

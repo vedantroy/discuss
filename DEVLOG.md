@@ -1,5 +1,8 @@
 # 19-04-2022
 
+Auth is finally done.
+Took forever. But I got redirects working too, and I don't think it's hacky (which is nice)
+
 How to generate auto-incrementing integer:
 (I'm gonna use a nano-id instead b/c it will prevent iterating over all users)
 
