@@ -30,14 +30,14 @@ const toNum = (s: string) => {
     return Math.round(f);
 };
 
-export default function({ url, highlights }: PDFWindowProps) {
+export default function({ url: docSource, highlights }: PDFWindowProps) {
     const [loaded, setLoaded] = useState(false);
     const docRef = useRef<PDFDocumentProxy | null>(null);
     const { width, height } = useWindowDimensions();
 
     useEffect(() => {
         async function go() {
-            const docTask = pdfjs.getDocument(url);
+            const docTask = pdfjs.getDocument(docSource);
             const doc = await docTask.promise;
             docRef.current = doc;
             setLoaded(true);
@@ -89,6 +89,7 @@ export default function({ url, highlights }: PDFWindowProps) {
                     const scale = (n: number) => Math.round(n * (1 / ctx.scale));
 
                     const params = new URLSearchParams(toURLSearchParams({
+                        url: docSource,
                         left: scale(left),
                         top: scale(top),
                         width: scale(right - left),
@@ -105,14 +106,6 @@ export default function({ url, highlights }: PDFWindowProps) {
                     const url = `${location.protocol}//${location.host}/d/pdf/submit`;
                     const urlWithParams = `${url}?${params.toString()}`;
                     window.open(urlWithParams, "_blank")!!.focus();
-
-                    // TODO: Might be able to merge these 2 lines
-                    // We should generate a preview link
-
-                    // we need to get the viewbox of the selection
-                    // this time: plan
-                    // 1. we iterate over all nodes to find x/y
-                    // 2. we adjust for scale
                 }
             }
         }, []);

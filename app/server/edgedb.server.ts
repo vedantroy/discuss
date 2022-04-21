@@ -2,7 +2,6 @@ import * as edgedb from "edgedb";
 import { ConnectConfig } from "edgedb/dist/conUtils";
 import invariant from "tiny-invariant";
 import e from "~/../dbschema/edgeql-js";
-import * as types from "~/../dbschema/edgeql-js/types";
 
 let db: edgedb.Client;
 
@@ -34,4 +33,4 @@ if (production) {
 }
 
 export default db;
-export { e, types as t };
+export { e };

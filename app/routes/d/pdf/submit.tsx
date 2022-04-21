@@ -13,6 +13,8 @@ export default function() {
         "write plain text here\neventually i'll support markdown ...\n the UI library is not to my ... taste",
     );
 
+    console.log(`URL: ${ctx?.url}`);
+
     useEffect(() => {
         const urlSearchParams = new URLSearchParams(window.location.search);
         const params = Object.fromEntries(urlSearchParams.entries());
@@ -26,7 +28,7 @@ export default function() {
                 <div className="text-lg">Title</div>
                 <input className="Border-Appearance rounded w-full p-1"></input>
                 <div className="text-lg mt-3">Excerpt</div>
-                {ctx ? <PreviewViewer className="w-full" ctx={ctx} url="/test.pdf" /> : null}
+                {ctx ? <PreviewViewer className="w-full" ctx={ctx} url={ctx.url} /> : null}
                 <div className="text-lg mt-3">Body</div>
                 <textarea
                     value={postText}

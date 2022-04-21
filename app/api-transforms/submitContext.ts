@@ -3,6 +3,7 @@ import invariant from "tiny-invariant";
 import { Rect } from "~/components/PDFWindow/types";
 
 export type SubmitContext = {
+    url: string;
     left: number;
     top: number;
     width: number;
@@ -15,6 +16,9 @@ export type SubmitContextSerialized = {
     ltwh: string;
     rects: string;
     p: string;
+    // TODO: This will enable super easy pirating ...
+    // (I think this was somewhat inevitable ...)
+    url: string;
 };
 
 export function toURLSearchParams(ctx: SubmitContext): SubmitContextSerialized {
@@ -23,6 +27,7 @@ export function toURLSearchParams(ctx: SubmitContext): SubmitContextSerialized {
         ltwh: [left, top, width, height].join(","),
         rects: rects.map(r => `${r.x},${r.y},${r.width},${r.height}`).join(","),
         p: page.toString(),
+        url: ctx.url,
     };
 }
 
@@ -40,6 +45,7 @@ export function fromURLSearchParams(ctx: SubmitContextSerialized): SubmitContext
     invariant(typeof ctx.ltwh === "string", "ltwh: " + msg);
     invariant(typeof ctx.p === "string", "page: " + msg);
     invariant(typeof ctx.rects === "string", "rects: " + msg);
+    invariant(typeof ctx.url === "string", "rects: " + msg);
 
     const { ltwh: rawLtwh, rects: rawRects, p: rawPage } = ctx;
     const ltwh = deserializeCommaArray(rawLtwh);
@@ -55,6 +61,7 @@ export function fromURLSearchParams(ctx: SubmitContextSerialized): SubmitContext
     invariant(!isNaN(page), `invalid page: ${rawPage}`);
 
     return {
+        url: ctx.url,
         left: ltwh[0],
         top: ltwh[1],
         width: ltwh[2],

@@ -4,8 +4,11 @@
 # or should deleted users just be anonymized & but kept in the DB?
 
 module default {
+	# for now all clubs are public
 	type Club {
 		required property name -> str;
+		# for now: this will always be true
+		required property public -> bool;
 		required property shortId -> str {
 			constraint exclusive;
 		}
@@ -13,6 +16,7 @@ module default {
 		multi link users -> User;
 	}
 
+	# TODO: Add type discriminator
 	abstract type Document {
 		required property name -> str;
 		# default ids are too long for urls 
