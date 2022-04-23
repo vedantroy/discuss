@@ -73,7 +73,7 @@ module default {
 		required property title -> str;
 		required property content -> str;
 		# Cached value of the post's score (instead of querying votes everytime)
-		required property score -> str;
+		required property score -> int16;
 	}
 
 	type PDFPost extending Post {
@@ -86,6 +86,7 @@ module default {
 		# so I merged the classes
 
 		required property excerpt -> str;
+		required link excerptRect -> PDFRect;
 		required property page -> int16;
 		required property anchorIdx -> int16;
 		required property focusIdx -> int16;

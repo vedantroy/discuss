@@ -12,9 +12,11 @@
     "baseUrl": ".",
     "paths": {
       "~/*": ["./app/*"]
-      // "@/*": ["./*"]
     },
-
+    // We don't care about node_modules
+    // https://stackoverflow.com/questions/51634361/how-to-force-tsc-to-ignore-node-modules-folder
+    "skipLibCheck": true,
+    "incremental": true,
     // Remix takes care of building everything in `remix build`.
     "noEmit": true
   }

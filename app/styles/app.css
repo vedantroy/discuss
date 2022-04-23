@@ -1966,6 +1966,41 @@ html {
   border-radius: var(--rounded-btn, 0.5rem);
 }
 
+.btn-outline.btn-primary .badge {
+  --tw-border-opacity: 1;
+  border-color: hsl(var(--p) / var(--tw-border-opacity));
+  --tw-bg-opacity: 1;
+  background-color: hsl(var(--p) / var(--tw-bg-opacity));
+  --tw-text-opacity: 1;
+  color: hsl(var(--pc) / var(--tw-text-opacity));
+}
+
+.btn-outline.btn-primary .badge-outline {
+  --tw-border-opacity: 1;
+  border-color: hsl(var(--p) / var(--tw-border-opacity));
+  background-color: transparent;
+  --tw-text-opacity: 1;
+  color: hsl(var(--p) / var(--tw-text-opacity));
+}
+
+.btn-outline.btn-primary:hover .badge {
+  --tw-border-opacity: 1;
+  border-color: hsl(var(--pc) / var(--tw-border-opacity));
+  --tw-bg-opacity: 1;
+  background-color: hsl(var(--pc) / var(--tw-bg-opacity));
+  --tw-text-opacity: 1;
+  color: hsl(var(--p) / var(--tw-text-opacity));
+}
+
+.btn-outline.btn-primary:hover .badge.outline {
+  --tw-border-opacity: 1;
+  border-color: hsl(var(--pc) / var(--tw-border-opacity));
+  --tw-bg-opacity: 1;
+  background-color: hsl(var(--pf, var(--p)) / var(--tw-bg-opacity));
+  --tw-text-opacity: 1;
+  color: hsl(var(--pc) / var(--tw-text-opacity));
+}
+
 .btn:active:hover,
   .btn:active:focus {
   -webkit-animation: none;
@@ -1985,6 +2020,26 @@ html {
   outline-offset: 2px;
 }
 
+.btn-primary {
+  --tw-border-opacity: 1;
+  border-color: hsl(var(--p) / var(--tw-border-opacity));
+  --tw-bg-opacity: 1;
+  background-color: hsl(var(--p) / var(--tw-bg-opacity));
+  --tw-text-opacity: 1;
+  color: hsl(var(--pc) / var(--tw-text-opacity));
+}
+
+.btn-primary:hover, .btn-primary.btn-active {
+  --tw-border-opacity: 1;
+  border-color: hsl(var(--pf, var(--p)) / var(--tw-border-opacity));
+  --tw-bg-opacity: 1;
+  background-color: hsl(var(--pf, var(--p)) / var(--tw-bg-opacity));
+}
+
+.btn-primary:focus-visible {
+  outline: 2px solid hsl(var(--p));
+}
+
 .btn.glass:hover,
     .btn.glass.btn-active {
   --glass-opacity: 25%;
@@ -1993,6 +2048,20 @@ html {
 
 .btn.glass:focus-visible {
   outline: 2px solid 0 0 2px currentColor;
+}
+
+.btn-outline.btn-primary {
+  --tw-text-opacity: 1;
+  color: hsl(var(--p) / var(--tw-text-opacity));
+}
+
+.btn-outline.btn-primary:hover {
+  --tw-border-opacity: 1;
+  border-color: hsl(var(--pf, var(--p)) / var(--tw-border-opacity));
+  --tw-bg-opacity: 1;
+  background-color: hsl(var(--pf, var(--p)) / var(--tw-bg-opacity));
+  --tw-text-opacity: 1;
+  color: hsl(var(--pc) / var(--tw-text-opacity));
 }
 
 .btn-disabled, .btn-disabled:hover, .btn[disabled], .btn[disabled]:hover {
@@ -2126,6 +2195,10 @@ html {
 
 .divider:not(:empty) {
   gap: 1rem;
+}
+
+.drawer-toggle:focus-visible ~ .drawer-content .drawer-button.btn-primary {
+  outline: 2px solid hsl(var(--p));
 }
 
 .label a:hover {
@@ -2473,6 +2546,10 @@ html {
   z-index: 20;
 }
 
+.m-\[1px\] {
+  margin: 1px;
+}
+
 .mx-auto {
   margin-left: auto;
   margin-right: auto;
@@ -2514,20 +2591,20 @@ html {
   margin-top: 1.5rem;
 }
 
-.mt-2 {
-  margin-top: 0.5rem;
-}
-
-.mb-6 {
-  margin-bottom: 1.5rem;
-}
-
 .mt-3 {
   margin-top: 0.75rem;
 }
 
 .mt-1 {
   margin-top: 0.25rem;
+}
+
+.mt-2 {
+  margin-top: 0.5rem;
+}
+
+.mb-6 {
+  margin-bottom: 1.5rem;
 }
 
 .mr-1 {
@@ -2578,16 +2655,16 @@ html {
   height: 100vh;
 }
 
-.h-10 {
-  height: 2.5rem;
-}
-
 .h-full {
   height: 100%;
 }
 
 .h-52 {
   height: 13rem;
+}
+
+.h-10 {
+  height: 2.5rem;
 }
 
 .h-28 {
@@ -2749,14 +2826,14 @@ html {
   background-color: rgb(229 231 235 / var(--tw-bg-opacity));
 }
 
-.bg-gray-50 {
-  --tw-bg-opacity: 1;
-  background-color: rgb(249 250 251 / var(--tw-bg-opacity));
-}
-
 .bg-gray-100 {
   --tw-bg-opacity: 1;
   background-color: rgb(243 244 246 / var(--tw-bg-opacity));
+}
+
+.bg-gray-50 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(249 250 251 / var(--tw-bg-opacity));
 }
 
 .bg-zinc-200 {
@@ -2835,14 +2912,14 @@ html {
   line-height: 1.25rem;
 }
 
-.text-3xl {
-  font-size: 1.875rem;
-  line-height: 2.25rem;
-}
-
 .text-lg {
   font-size: 1.125rem;
   line-height: 1.75rem;
+}
+
+.text-3xl {
+  font-size: 1.875rem;
+  line-height: 2.25rem;
 }
 
 .font-bold {
@@ -2958,21 +3035,18 @@ html {
    We do this because we want to use this class on inputs and textareas
 */
 
-.Border-Appearance {
-  /* We add 1px to the border on focus. To prevent the div from expanding
-        we add a margin (when unfocused) which we remove (when focused) */
-  margin: 1px;
+.Form-Input {
   -webkit-appearance: none;
      -moz-appearance: none;
           appearance: none;
+  border-radius: 0.25rem;
   border-width: 1px;
   border-style: solid;
   --tw-border-opacity: 1;
-  border-color: rgb(156 163 175 / var(--tw-border-opacity))
+  border-color: rgb(156 163 175 / var(--tw-border-opacity));
 }
 
-.Border-Appearance:focus {
-  margin: 0px;
+.Form-Input:focus {
   border-width: 2px;
   --tw-border-opacity: 1;
   border-color: rgb(14 165 233 / var(--tw-border-opacity));
@@ -3004,4 +3078,18 @@ html, body {
 .hover\:shadow-zinc-500:hover {
   --tw-shadow-color: #71717a;
   --tw-shadow: var(--tw-shadow-colored);
+}
+
+.focus\:m-0:focus {
+  margin: 0px;
+}
+
+.focus\:px-\[15px\]:focus {
+  padding-left: 15px;
+  padding-right: 15px;
+}
+
+.focus\:py-\[7px\]:focus {
+  padding-top: 7px;
+  padding-bottom: 7px;
 }

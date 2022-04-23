@@ -4,7 +4,7 @@ import { Form, LoaderFunction, redirect } from "remix";
 import { json, useLoaderData } from "remix";
 import { SocialsProvider } from "remix-auth-socials";
 import invariant from "tiny-invariant";
-import { getSession } from "~/route-utils/session";
+import { getSession, setSessionHeader } from "~/route-utils/session";
 import { authenticator, SESSION_REDIRECT_KEY, sessionStorage } from "~/server/auth.server";
 
 type LoaderData = {
@@ -23,9 +23,8 @@ export const loader: LoaderFunction = async ({ request }) => {
             // A redirect was set using `session.flash`, so follow it
             // We need to commit the new session (which no longer has the flashed value,
             // since flashes are removed automatically on session.get)
-            const cookie = await sessionStorage.commitSession(session);
             return redirect(redirectRoute, {
-                headers: { "Set-Cookie": cookie },
+                headers: await setSessionHeader(session),
             });
         } else {
             // No redirect was set, so redirect to base page

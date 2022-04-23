@@ -1,4 +1,4 @@
-CREATE MIGRATION m1qj67ui6t5kgrhcvs5l46kksz7xjggquznsw4deh62wrq3jcimq3q
+CREATE MIGRATION m1xm57ri4zipda3kaaug2wzzea63ntd6yx7h3ld3octayhwlctzvzq
     ONTO initial
 {
   CREATE TYPE default::Answer {
@@ -8,7 +8,7 @@ CREATE MIGRATION m1qj67ui6t5kgrhcvs5l46kksz7xjggquznsw4deh62wrq3jcimq3q
   CREATE ABSTRACT TYPE default::Post {
       CREATE REQUIRED PROPERTY content -> std::str;
       CREATE REQUIRED PROPERTY createdAt -> std::datetime;
-      CREATE REQUIRED PROPERTY score -> std::str;
+      CREATE REQUIRED PROPERTY score -> std::int16;
       CREATE REQUIRED PROPERTY shortId -> std::str {
           CREATE CONSTRAINT std::exclusive;
       };
@@ -27,6 +27,7 @@ CREATE MIGRATION m1qj67ui6t5kgrhcvs5l46kksz7xjggquznsw4deh62wrq3jcimq3q
       CREATE MULTI LINK answers := (.<post[IS default::Answer]);
   };
   CREATE TYPE default::PDFPost EXTENDING default::Post {
+      CREATE REQUIRED LINK excerptRect -> default::PDFRect;
       CREATE REQUIRED MULTI LINK rects -> default::PDFRect;
       CREATE REQUIRED PROPERTY anchorIdx -> std::int16;
       CREATE REQUIRED PROPERTY anchorOffset -> std::int16;

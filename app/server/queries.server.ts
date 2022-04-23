@@ -4,6 +4,7 @@ import { nanoid } from "nanoid";
 import invariant from "tiny-invariant";
 import type { Brand } from "ts-brand";
 import { PDFPost } from "~/../dbschema/edgeql-js/types";
+import { Rect } from "~/components/PDFWindow/types";
 import db, { e } from "~/server/edgedb.server";
 
 // Get the Google OAuth data if it exists
@@ -147,4 +148,49 @@ export async function getPDFAndClub(
             },
         },
     };
+}
+
+type CommonPostProps = {
+    userId: ShortUserID;
+    title: string;
+    content: string;
+};
+
+type PDFPostProps = {
+    document: ShortDocumentID;
+
+    page: number;
+    excerptRect: Rect;
+    anchorIdx: number;
+    focusIdx: number;
+    anchorOffset: number;
+    focusOffset: number;
+    rects: Rect[];
+    excerpt: string;
+};
+
+export async function createPDFPost(props: CommonPostProps & PDFPostProps): Promise<ShortDocumentID> {
+    const shortId = nanoid();
+    const query = e.insert(e.PDFPost, {
+        shortId,
+        createdAt: e.datetime_of_transaction(),
+        title: props.title,
+        content: props.content,
+        score: 0,
+        user: e.select(e.User, user => ({ limit: 1, filter: e.op(user.shortId, "=", props.userId) })),
+        excerptRect: e.insert(e.PDFRect, props.excerptRect),
+        rects: e.set(...props.rects.map(r => e.insert(e.PDFRect, r))),
+        document: e.select(e.PDF, doc => ({ limit: 1, filter: e.op(doc.shortId, "=", props.document) })),
+        anchorIdx: props.anchorIdx,
+        focusIdx: props.focusIdx,
+        anchorOffset: props.anchorOffset,
+        focusOffset: props.focusOffset,
+        page: props.page,
+        excerpt: props.excerpt,
+    });
+    console.log("RUNNING");
+    console.log(query.toEdgeQL());
+
+    await query.run(db);
+    return shortId as ShortDocumentID;
 }

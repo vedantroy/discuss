@@ -3,7 +3,7 @@ const Input = (
 ) => (
     <input
         {...props}
-        className={`Border-Appearance rounded ${className ? className : ""}`}
+        className={`Form-Input m-[1px] focus:m-0 ${className ? className : ""}`}
     />
 );
 

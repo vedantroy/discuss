@@ -1,4 +1,5 @@
-import { json, LoaderFunction, useLoaderData } from "remix";
+import { json, LoaderFunction, useLoaderData, useParams } from "remix";
+import invariant from "tiny-invariant";
 import { toId } from "~/api-transforms/spanId";
 import Viewer from "~/components/PDFWindow";
 import PDF_CSS from "~/components/PDFWindow/PDFViewer/styles/page.css";
@@ -29,6 +30,8 @@ export const loader: LoaderFunction = async ({ params, request }) => {
 
 export default function Index() {
     const data = useLoaderData<DocumentPayload<PDFContext>>();
+    const params = useParams();
+    const docId = getParam(params, "docId");
 
     const highlights = data.docCtx.highlights.map(({ page, anchorIdx, focusIdx, shortId, ...rest }) => ({
         id: shortId,
@@ -38,5 +41,5 @@ export default function Index() {
         ...rest,
     }));
 
-    return <Viewer highlights={highlights} url={data.docCtx.url} />;
+    return <Viewer docId={docId} highlights={highlights} url={data.docCtx.url} />;
 }

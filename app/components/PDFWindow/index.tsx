@@ -14,6 +14,7 @@ import useWindowDimensions from "./useWindowDimensions";
 type PDFWindowProps = {
     url: string;
     highlights: PostHighlight[];
+    docId: string;
 };
 
 type ToastIds = {
@@ -23,14 +24,7 @@ type ToastIds = {
 const HOTKEY_LINK = "l";
 const HOTKEY_POST = "p";
 
-const toNum = (s: string) => {
-    const noPx = s.slice(0, -"px".length);
-    const f = parseFloat(noPx);
-    invariant(!isNaN(f), `invalid style: ${s}`);
-    return Math.round(f);
-};
-
-export default function({ url: docSource, highlights }: PDFWindowProps) {
+export default function({ url: docSource, highlights, docId }: PDFWindowProps) {
     const [loaded, setLoaded] = useState(false);
     const docRef = useRef<PDFDocumentProxy | null>(null);
     const { width, height } = useWindowDimensions();
@@ -103,7 +97,7 @@ export default function({ url: docSource, highlights }: PDFWindowProps) {
                         page: ctx.page,
                     }));
 
-                    const url = `${location.protocol}//${location.host}/d/pdf/submit`;
+                    const url = `${location.protocol}//${location.host}/d/pdf/${docId}/submit`;
                     const urlWithParams = `${url}?${params.toString()}`;
                     window.open(urlWithParams, "_blank")!!.focus();
                 }

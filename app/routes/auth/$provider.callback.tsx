@@ -1,13 +1,13 @@
 // TODO: Do we need to do CSRF protection here?
 import { withYup } from "@remix-validated-form/with-yup";
 import { updateSvg } from "jdenticon";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { ActionFunction, json, LoaderFunction, redirect, useLoaderData } from "remix";
 import { SocialsProvider } from "remix-auth-socials";
-import { useField, ValidatedForm, validationError } from "remix-validated-form";
+import { ValidatedForm, validationError } from "remix-validated-form";
 import invariant from "tiny-invariant";
 import * as yup from "yup";
-import Input from "~/components/input";
+import ValidatedInput from "~/components/primitives/validatedInput";
 import { getParam } from "~/route-utils/params";
 import { getSession, setSessionHeader } from "~/route-utils/session";
 import { authenticator, UserSession } from "~/server/auth.server";
@@ -127,29 +127,6 @@ export let loader: LoaderFunction = async ({ request, params }) => {
     });
 };
 
-type MyInputProps = {
-    name: string;
-    onChange: (value: React.ChangeEvent<HTMLInputElement>) => void;
-};
-export const DisplayNameInput = ({ name, onChange }: MyInputProps) => {
-    const { error, getInputProps } = useField(name);
-    // @ts-expect-error - I'm not sure why there's a type error here
-    const props = getInputProps({ id: name });
-    const og = props.onChange;
-    og
-        ? props.onChange = (e) => {
-            onChange(e);
-            og(e);
-        }
-        : props.onChange = onChange;
-    return (
-        <div>
-            <Input className="w-full text-base py-1 px-1" {...props} />
-            {error && <div className="text-xs mt-0.5 text-rose-600">{error}</div>}
-        </div>
-    );
-};
-
 const DENTICON_ID = "jsdenticon";
 
 export default function() {
@@ -174,7 +151,8 @@ export default function() {
                     >
                         <label className="font-bold text-base">Display name</label>
                         <div className="text-sm text-gray-500 mb-1">This is shown on posts and comments</div>
-                        <DisplayNameInput
+                        <ValidatedInput
+                            className="w-full"
                             name={INPUT_DISPLAY_NAME}
                             onChange={e => setDisplayName(e.target.value)}
                         />
@@ -183,7 +161,7 @@ export default function() {
                             <svg id={DENTICON_ID} width={96} height={96}></svg>
                             <div>TODO: Support other propic options</div>
                         </div>
-                        <button type="submit" className="btn mt-6">Create</button>
+                        <button type="submit" className="btn btn-primary mt-6">Create</button>
                     </ValidatedForm>
                 </div>
             </div>
