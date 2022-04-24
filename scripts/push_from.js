@@ -43,12 +43,20 @@ if (isNaN(fromMigration)) {
     process.exit(1);
 }
 
+const og = child_process.execSync;
+child_process.execSync = (...args) => {
+    console.log(`Executing: ${args[0]}`);
+    return og(...args);
+};
+
 try {
     child_process.execSync(`${OPTS} query 'CREATE DATABASE temp'`).toString();
 } catch (e) {
     const message = e.message;
     if (!message.includes("DuplicateDatabaseDefinitionError")) {
         throw e;
+    } else {
+        console.log(`Ignoring duplicate temp database`);
     }
 }
 child_process

@@ -7,27 +7,37 @@ import { Rect } from "../PDFWindow/types";
 import useContainerDimensions from "./useContainerDimensions";
 import usePDFDoc from "./usePDFDoc";
 
+type PageRects = {
+    outline: Rect;
+    rects: Rect[];
+};
+
 type PreviewViewProps = {
     className: string;
     url: string;
-    ctx: SubmitContext;
+    pageRects: PageRects;
+    page: number;
 };
 
 type PageProps = {
     containerWidth: number;
-    ctx: SubmitContext;
     page: PDFPageProxy;
+    pageRects: PageRects;
 };
 
 // There's some post MVP stuff I need to do here where resizing back down
 // does not cause the canvas to re-shrink but that's beyond current scope
-function Page({ ctx, page, containerWidth }: PageProps) {
+function Page({ pageRects, page, containerWidth }: PageProps) {
     const sourceCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const destCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
     const [rects, setRects] = useState<Rect[] | null>(null);
 
-    const { width: sampleW, height: sampleH, rects: highlightRects, top, left } = ctx;
+    const { outline, rects: highlightRects } = pageRects;
+    // const { width: sampleW, height: sampleH, rects: highlightRects, top, left } = ctx;
+
+    const { width: sampleW, height: sampleH, x: left, y: top } = outline;
+
     // The width of the excerpt is given @ 1x scale
     // If the excerpt is rendered @ 5px & the container width is 10px
     // We need to render the page @ 2x zoom, so the excerpt will have 10px width
@@ -40,8 +50,8 @@ function Page({ ctx, page, containerWidth }: PageProps) {
     const { width: srcW, height: srcH } = vp;
 
     // The position of the sample in the source canvas
-    const srcTop = scale(ctx.top);
-    const srcLeft = scale(ctx.left);
+    const srcTop = scale(top);
+    const srcLeft = scale(left);
 
     useEffect(() => {
         if (sourceCanvasRef) {
@@ -104,8 +114,12 @@ function Page({ ctx, page, containerWidth }: PageProps) {
     return (
         <div className="relative">
             <canvas hidden={true} ref={sourceCanvasRef} width={srcW} height={srcH} />
-            <div className="shadow cursor-pointer" style={{ width: destW }}>
-                <canvas ref={destCanvasRef} width={containerWidth} height={destH} />
+            <div className="shadow cursor-pointer p-1" style={{ width: destW, height: destH }}>
+                <canvas
+                    ref={destCanvasRef}
+                    width={containerWidth}
+                    height={destH}
+                />
             </div>
             <div className="inset-0 absolute w-0 h-0">
                 {rects ? <Highlight rects={rects} active={false} id="" /> : null}
@@ -114,7 +128,7 @@ function Page({ ctx, page, containerWidth }: PageProps) {
     );
 }
 
-export default function PreviewViewer({ url, ctx, className }: PreviewViewProps) {
+export default function PreviewViewer({ url, page, className, pageRects }: PreviewViewProps) {
     const divRef = useRef<HTMLDivElement | null>(null);
     const { width, height } = useContainerDimensions(divRef);
     const doc = usePDFDoc(url);
@@ -123,7 +137,7 @@ export default function PreviewViewer({ url, ctx, className }: PreviewViewProps)
     useEffect(() => {
         if (doc) {
             async function go() {
-                const pageProxy = await doc!!.getPage(ctx.page);
+                const pageProxy = await doc!!.getPage(page);
                 setPageProxy(pageProxy);
             }
             go();
@@ -133,7 +147,7 @@ export default function PreviewViewer({ url, ctx, className }: PreviewViewProps)
     return (
         <div className={className} ref={divRef}>
             {((width !== 0 && height !== 0) && pageProxy)
-                ? <Page page={pageProxy} containerWidth={width} ctx={ctx} />
+                ? <Page page={pageProxy} containerWidth={width} pageRects={pageRects} />
                 : <div>loading ...</div>}
         </div>
     );

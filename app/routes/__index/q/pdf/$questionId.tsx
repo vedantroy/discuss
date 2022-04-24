@@ -1,7 +1,13 @@
 import { ActionFunction, Form, json, LoaderFunction, useLoaderData } from "remix";
+import invariant from "tiny-invariant";
 import POST_CSS from "~/../styles/post.css";
+import PreviewViewer from "~/components/PDFPreview";
+import { getParam } from "~/route-utils/params";
+import { throwNotFoundResponse } from "~/route-utils/response";
+import { isLoggedIn } from "~/route-utils/session";
 import { authenticator } from "~/server/auth.server";
 import db, { e } from "~/server/edgedb.server";
+import { getQuestion, ObjectStatusCode, Question, ShortQuestionID } from "~/server/queries.server";
 import colors from "~/vendor/tailwindcss/colors";
 
 export function links() {
@@ -15,9 +21,6 @@ const VoteAction = {
 type VoteAction = typeof VoteAction[keyof typeof VoteAction];
 
 export const action: ActionFunction = async ({ request, params }) => {
-    const user = authenticator.isAuthenticated(request);
-    const { questionId } = params;
-
     // extract the vote
     const formData = await request.formData();
     const { _action } = Object.fromEntries(formData) as { _action: VoteAction };
@@ -33,9 +36,15 @@ export const action: ActionFunction = async ({ request, params }) => {
 };
 
 export const loader: LoaderFunction = async ({ request, context, params }) => {
-    return json({});
-    // console.log(`LOADER IS GETTING CALLED WITH: ${JSON.stringify(db, null, 2)}`);
-    // return json(db);
+    const userData = await authenticator.isAuthenticated(request);
+    const user = isLoggedIn(userData);
+    const questionId = getParam(params, "questionId");
+    const question = await getQuestion(questionId as ShortQuestionID, user?.shortId);
+    if (question.type === ObjectStatusCode.MISSING) {
+        throwNotFoundResponse();
+    }
+    invariant(question.type === ObjectStatusCode.VALID);
+    return json(question.payload);
 };
 
 function Arrow({ up, active }: { up: boolean; active: boolean }) {
@@ -59,8 +68,10 @@ function Arrow({ up, active }: { up: boolean; active: boolean }) {
 }
 
 export default function() {
-    const data = useLoaderData<any>();
+    const data = useLoaderData<Question>();
     console.log(data);
+
+    const { title, content, page, document: { url }, rects, excerptRect } = data;
 
     return (
         <>
@@ -73,7 +84,7 @@ export default function() {
             </div>
             <div className="w-full max-w-[1264px] my-0 mx-auto px-4">
                 <div className="flex flex-col">
-                    <h1 className="text-3xl break-words mt-6">This is a post title</h1>
+                    <h1 className="text-3xl break-words mt-6">{title}</h1>
                     <div className="flex flex-row">
                         <div className="text-sm mt-2 text-gray-500">Asked&nbsp;</div>
                         <div className="text-sm mt-2">9 years ago&nbsp;</div>
@@ -83,12 +94,18 @@ export default function() {
                     <div className="divider w-full h-0 my-0 mt-2 mb-6"></div>
                     <div className="flex flex-row">
                         <div className="flex flex-col items-center w-fit">
-                            <Arrow up={true} active={data.status === "UP"} />
+                            <Arrow up={true} active={true} />
                             <div>0</div>
-                            <Arrow up={false} active={data.status === "DOWN"} />
+                            <Arrow up={false} active={false} />
                         </div>
-                        <div>Hello!</div>
+                        <PreviewViewer
+                            className="w-full pl-2"
+                            pageRects={{ rects, outline: excerptRect }}
+                            page={page}
+                            url={url}
+                        />
                     </div>
+                    <div>{content}</div>
                 </div>
             </div>
         </>

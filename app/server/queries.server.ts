@@ -1,9 +1,9 @@
-import { Club, User } from "dbschema/edgeql-js/modules/default";
+import * as fs from "fs";
 import _ from "lodash";
 import { nanoid } from "nanoid";
 import invariant from "tiny-invariant";
 import type { Brand } from "ts-brand";
-import { PDFPost } from "~/../dbschema/edgeql-js/types";
+import { Answer, Club, PDF, PDFPost, PDFRect as _PDFRect, User } from "~/../dbschema/edgeql-js/types";
 import { Rect } from "~/components/PDFWindow/types";
 import { reportQuery } from "~/debug/query";
 import db, { e } from "~/server/edgedb.server";
@@ -55,20 +55,31 @@ export async function insertUserWithGoogleIdentity(
     return shortId as ShortUserID;
 }
 
-export const DocumentStatusCode = {
+export const ObjectStatusCode = {
     MISSING: "missing",
+    NEED_INVITE: "need_invite",
+    NEED_LOGIN_INFO: "need_login_info",
     VALID: "valid",
 } as const;
-type DocumentStatusCode = typeof DocumentStatusCode;
+
+type ObjectStatusCode = typeof ObjectStatusCode;
 export type DocumentPayload<T> = {
     docName: string;
     clubName: string;
     clubId: ShortClubID;
     docCtx: T;
 };
-export type DocumentStatus<T> =
-    | { type: DocumentStatusCode["MISSING"] }
-    | { type: DocumentStatusCode["VALID"]; payload: DocumentPayload<T> };
+
+type ClubResource<T> =
+    | { type: ObjectStatusCode["MISSING"] }
+    | { type: ObjectStatusCode["NEED_INVITE"] }
+    | { type: ObjectStatusCode["NEED_LOGIN_INFO"] }
+    | { type: ObjectStatusCode["VALID"]; payload: T };
+
+export type DocumentStatus<T> = ClubResource<DocumentPayload<T>>;
+// export type DocumentStatus<T> =
+//    | { type: ObjectStatusCode["MISSING"] }
+//    | { type: ObjectStatusCode["VALID"]; payload: DocumentPayload<T> };
 
 // Gonna flex my type checking on you
 const pdfHighlightFields = [
@@ -85,6 +96,90 @@ export type PDFContext = {
     url: string;
     highlights: Array<Pick<PDFPost, PDFHighlightField>>;
 };
+
+function canAccessClub(club: { shortId: ShortClubID; isPublic: boolean }, user: ShortUserID | undefined): boolean {
+    if (!club.isPublic) {
+        throw new Error(`private clubs not implemented yet ...`);
+    }
+    return true;
+}
+
+// typescriptify the fuck out of this
+type UserPreview = Pick<User, "shortId" | "displayName" | "image">;
+type ClubPreview = Pick<Club, "shortId" | "name">;
+type PDFRect = Pick<_PDFRect, "height" | "width" | "x" | "y">;
+
+export type Question = {
+    title: string;
+    rects: PDFRect[];
+    excerptRect: PDFRect;
+    content: string;
+    page: number;
+    score: number;
+    createdAt: Date;
+    answers: Array<Pick<Answer, "content" | "createdAt"> & { user: UserPreview }>;
+    user: UserPreview;
+    document: Pick<PDF, "shortId" | "url"> & { club: ClubPreview };
+};
+export type QuestionStatus = ClubResource<Question>;
+
+const Selectors = {
+    RECT: {
+        x: true,
+        y: true,
+        width: true,
+        height: true,
+    },
+} as const;
+
+export async function getQuestion(id: ShortQuestionID, userId?: ShortUserID): Promise<QuestionStatus> {
+    const query = e.select(e.PDFPost, post => ({
+        title: true,
+        content: true,
+        page: true,
+        score: true,
+        createdAt: true,
+        rects: Selectors.RECT,
+        excerptRect: Selectors.RECT,
+        answers: {
+            content: true,
+            createdAt: true,
+            user: {
+                shortId: true,
+                displayName: true,
+                image: true,
+            },
+        },
+        user: {
+            shortId: true,
+            displayName: true,
+            image: true,
+        },
+        filter: e.op(post.shortId, "=", id),
+        document: {
+            url: true,
+            shortId: true,
+            club: {
+                name: true,
+                public: true,
+                shortId: true,
+            },
+        },
+    }));
+
+    const r = await query.run(db);
+    if (r === null) {
+        return { type: ObjectStatusCode.MISSING };
+    }
+    const shortId = r.document.club.shortId as ShortClubID;
+    const isPublic = r.document.club.public;
+    canAccessClub({ shortId, isPublic }, userId);
+
+    return {
+        type: ObjectStatusCode.VALID,
+        payload: r,
+    };
+}
 
 // https://github.com/remix-run/remix/discussions/2948
 // the type stuff might be irrelevant, since I might end up having each doc underneath its own prefix
@@ -109,7 +204,7 @@ export async function getPDFAndClub(
 
     const r = await query.run(db);
     if (r === null) {
-        return { type: DocumentStatusCode.MISSING };
+        return { type: ObjectStatusCode.MISSING };
     }
 
     const { name: docName, club } = r;
@@ -135,11 +230,11 @@ export async function getPDFAndClub(
         // But what's the realistic chance of that happening?
         console.log(`Suspicious delete: ${docId}`);
         invariant(false, `If this happens & it's legit, just remove this invariant`);
-        return { type: DocumentStatusCode.MISSING };
+        return { type: ObjectStatusCode.MISSING };
     }
 
     return {
-        type: DocumentStatusCode.VALID,
+        type: ObjectStatusCode.VALID,
         payload: {
             docName,
             clubName: club.name,
@@ -172,7 +267,9 @@ type PDFPostProps = {
 };
 
 export async function createPDFPost(props: CommonPostProps & PDFPostProps): Promise<ShortQuestionID> {
+    // https://github.com/edgedb/edgedb/discussions/3786?sort=top
     const shortId = nanoid();
+
     const query = e.insert(e.PDFPost, {
         shortId,
         createdAt: e.datetime_of_transaction(),
@@ -191,11 +288,40 @@ export async function createPDFPost(props: CommonPostProps & PDFPostProps): Prom
         excerpt: props.excerpt,
     });
 
-    const start = performance.now();
+    // buggy :(())
+    // const query = e.params(
+    //     { rects: e.array(e.tuple({ x: e.int16, y: e.int16, width: e.int16, height: e.int16 })) },
+    //     params =>
+    //         e.insert(
+    //             e.PDFPost,
+    //             {
+    //                 shortId,
+    //                 createdAt: e.datetime_of_transaction(),
+    //                 title: props.title,
+    //                 content: props.content,
+    //                 score: 0,
+    //                 user: e.select(e.User, user => ({ limit: 1, filter: e.op(user.shortId, "=", props.userId) })),
+    //                 excerptRect: e.insert(e.PDFRect, props.excerptRect),
+    //                 rects: e.for(e.array_unpack(params.rects), item =>
+    //                     e.insert(e.PDFRect, {
+    //                         x: item.x,
+    //                         y: item.y,
+    //                         width: item.width,
+    //                         height: item.height,
+    //                     })),
+    //                 document: e.select(e.PDF, doc => ({ limit: 1, filter: e.op(doc.shortId, "=", props.document) })),
+    //                 anchorIdx: props.anchorIdx,
+    //                 focusIdx: props.focusIdx,
+    //                 anchorOffset: props.anchorOffset,
+    //                 focusOffset: props.focusOffset,
+    //                 page: props.page,
+    //                 excerpt: props.excerpt,
+    //             },
+    //         ),
+    // );
+
+    // reportQuery({ edgeql: query.toEdgeQL(), durationMs: 0 });
     await query.run(db);
-    const end = performance.now();
-
-    reportQuery({ edgeql: query.toEdgeQL(), durationMs: end - start });
-
+    // reportQuery({ edgeql: query.toEdgeQL(), durationMs: end - start });
     return shortId as ShortQuestionID;
 }

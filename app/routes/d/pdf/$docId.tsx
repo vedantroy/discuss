@@ -7,8 +7,8 @@ import { getParam } from "~/route-utils/params";
 import { authenticator } from "~/server/auth.server";
 import {
     DocumentPayload,
-    DocumentStatusCode,
     getPDFAndClub,
+    ObjectStatusCode,
     PDFContext,
     ShortDocumentID,
     ShortUserID,
@@ -22,9 +22,10 @@ export const loader: LoaderFunction = async ({ params, request }) => {
     const docId = getParam(params, "docId");
     const userData = await authenticator.isAuthenticated(request);
     const doc = await getPDFAndClub(docId as ShortDocumentID, userData?.user?.shortId as ShortUserID);
-    if (doc.type === DocumentStatusCode.MISSING) {
-        throw json({ error: { type: DocumentStatusCode.MISSING } }, 404);
+    if (doc.type === ObjectStatusCode.MISSING) {
+        throw json({ error: { type: ObjectStatusCode.MISSING } }, 404);
     }
+    invariant(doc.type === ObjectStatusCode.VALID);
     return json(doc.payload);
 };
 

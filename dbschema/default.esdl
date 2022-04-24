@@ -77,17 +77,12 @@ module default {
 	}
 
 	type PDFPost extending Post {
-		# TODO: See if we can make abstract links
 		required link document -> PDF;
-
-		# Initially I had this split up into 2 separate classes:
-		# Highlight & Post
-		# However, each highlight belongs to 1 post & vice-versa
-		# so I merged the classes
 
 		required property excerpt -> str;
 		required link excerptRect -> PDFRect;
 		required property page -> int16;
+
 		required property anchorIdx -> int16;
 		required property focusIdx -> int16;
 		required property anchorOffset -> int16;
@@ -95,7 +90,8 @@ module default {
 
 		# maybe I should inline this as JSON?
 		# (reasoning ... less space, more performant?)
-		required multi link rects -> PDFRect;
+		# edgedb  bug ...
+		multi link rects -> PDFRect;
 	}
 
 	type PDFRect {
@@ -116,7 +112,7 @@ module default {
 	type Vote {
 		required property createdAt -> datetime;
 		required property up -> bool;
-
+EDGEDB 
 		required link user -> User;
 		required link post -> Post;
 	}

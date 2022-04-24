@@ -73,14 +73,11 @@ export const action: ActionFunction = async ({ request, params }) => {
         anchorOffset: meta.anchorOffset,
         focusOffset: meta.focusOffset,
     });
-    return redirect(`/q/pdf/${docId}`);
+    return redirect(`/q/pdf/${postId}`);
 };
 
 export default function() {
     const [ctx, setCtx] = useState<SubmitContext | null>(null);
-    // const [postText, setPostText] = useState(
-    //    "write plain text here\neventually i'll support markdown ...\n the UI library is not to my ... taste",
-    // );
 
     useEffect(() => {
         // Yes, right now people could submit garbage data to the DB
@@ -103,7 +100,19 @@ export default function() {
                 <div className="text-lg">Title</div>
                 <ValidatedInput name={INPUT_TITLE} className="w-full p-1" />
                 <div className="text-lg mt-3">Excerpt</div>
-                {ctx ? <PreviewViewer className="w-full" ctx={ctx} url={ctx.url} /> : null}
+                {ctx
+                    ? (
+                        <PreviewViewer
+                            className="w-full"
+                            pageRects={{
+                                rects: ctx.rects,
+                                outline: { x: ctx.left, y: ctx.top, width: ctx.width, height: ctx.height },
+                            }}
+                            page={ctx.page}
+                            url={ctx.url}
+                        />
+                    )
+                    : null}
                 <div className="text-lg mt-3">Body</div>
                 <ValidatedTextarea
                     name={INPUT_CONTENT}

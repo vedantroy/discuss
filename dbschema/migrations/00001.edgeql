@@ -1,4 +1,4 @@
-CREATE MIGRATION m1xm57ri4zipda3kaaug2wzzea63ntd6yx7h3ld3octayhwlctzvzq
+CREATE MIGRATION m1t2uixnld4i3fopfrvqrtgs7tsvdemovdcfxty726peep5qxudzoq
     ONTO initial
 {
   CREATE TYPE default::Answer {
@@ -28,7 +28,7 @@ CREATE MIGRATION m1xm57ri4zipda3kaaug2wzzea63ntd6yx7h3ld3octayhwlctzvzq
   };
   CREATE TYPE default::PDFPost EXTENDING default::Post {
       CREATE REQUIRED LINK excerptRect -> default::PDFRect;
-      CREATE REQUIRED MULTI LINK rects -> default::PDFRect;
+      CREATE MULTI LINK rects -> default::PDFRect;
       CREATE REQUIRED PROPERTY anchorIdx -> std::int16;
       CREATE REQUIRED PROPERTY anchorOffset -> std::int16;
       CREATE REQUIRED PROPERTY excerpt -> std::str;
