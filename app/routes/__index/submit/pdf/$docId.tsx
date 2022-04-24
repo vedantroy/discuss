@@ -1,14 +1,16 @@
 import { withYup } from "@remix-validated-form/with-yup";
 import { useEffect, useState } from "react";
-import { ActionFunction } from "remix";
+import { ActionFunction, redirect } from "remix";
 import { ValidatedForm, validationError } from "remix-validated-form";
 import * as yup from "yup";
 import { fromURLSearchParams, SubmitContext, SubmitContextSerialized } from "~/api-transforms/submitContext";
 import PreviewViewer from "~/components/PDFPreview";
-import Input from "~/components/primitives/input";
-import Textarea from "~/components/primitives/textarea";
 import ValidatedInput from "~/components/primitives/validatedInput";
 import ValidatedTextarea from "~/components/primitives/validatedTextarea";
+import { getParam } from "~/route-utils/params";
+import { isLoggedIn } from "~/route-utils/session";
+import { authenticator } from "~/server/auth.server";
+import { createPDFPost, ShortDocumentID } from "~/server/queries.server";
 import SUBMIT_CSS from "~/styles/submit.css";
 
 export function links() {
@@ -17,6 +19,7 @@ export function links() {
 
 const INPUT_TITLE = "Title";
 const INPUT_CONTENT = "Content";
+const INPUT_META = "Meta";
 
 const validator = withYup(
     yup.object({
@@ -32,13 +35,45 @@ const validator = withYup(
             .string()
             .required("Content is required")
             .label(INPUT_CONTENT)
-            .min(30, "Content must be at least 30 characters"),
+            .min(15, "Content must be at least 15 characters"),
+
+        [INPUT_META]: yup
+            .object()
+            .required(),
     }),
 );
 
 export const action: ActionFunction = async ({ request, params }) => {
     const fieldValues = await validator.validate(await request.formData());
     if (fieldValues.error) return validationError(fieldValues.error);
+
+    const docId = getParam(params, "docId");
+    const userData = await authenticator.isAuthenticated(request);
+    const user = isLoggedIn(userData);
+    if (!user) {
+        return new Response("Unauthorized", { status: 401 });
+    }
+
+    const { data } = fieldValues;
+    const title = data[INPUT_TITLE];
+    const content = data[INPUT_CONTENT];
+    // this is untyped for now
+    const meta = data[INPUT_META];
+    const postId = await createPDFPost({
+        userId: user.shortId,
+        title,
+        content,
+        document: docId as ShortDocumentID,
+        page: meta.page,
+        excerptRect: { x: meta.left, y: meta.top, width: meta.width, height: meta.height },
+        rects: meta.rects,
+        excerpt: meta.text,
+        focusIdx: meta.focusIdx,
+        anchorIdx: meta.anchorIdx,
+        anchorOffset: meta.anchorOffset,
+        focusOffset: meta.focusOffset,
+    });
+    return redirect(`/q/pdf/${docId}`);
 };
 
 export default function() {
@@ -73,9 +108,9 @@ export default function() {
                 <ValidatedTextarea
                     name={INPUT_CONTENT}
                     defaultValue=""
-                    // onChange={e => setPostText(e.target.value)}
                     className="w-full h-52 mt-1"
                 />
+                <input name={INPUT_META} type="hidden" value={JSON.stringify(ctx)}></input>
                 <button className="btn btn-primary">Submit</button>
             </div>
         </ValidatedForm>

@@ -10,6 +10,12 @@ export type SubmitContext = {
     height: number;
     rects: Rect[];
     page: number;
+    text: string;
+
+    anchorIdx: number;
+    focusIdx: number;
+    anchorOffset: number;
+    focusOffset: number;
 };
 
 export type SubmitContextSerialized = {
@@ -19,6 +25,12 @@ export type SubmitContextSerialized = {
     // TODO: This will enable super easy pirating ...
     // (I think this was somewhat inevitable ...)
     url: string;
+    text: string;
+
+    anchorIdx: string;
+    focusIdx: string;
+    anchorOffset: string;
+    focusOffset: string;
 };
 
 export function toURLSearchParams(ctx: SubmitContext): SubmitContextSerialized {
@@ -28,6 +40,12 @@ export function toURLSearchParams(ctx: SubmitContext): SubmitContextSerialized {
         rects: rects.map(r => `${r.x},${r.y},${r.width},${r.height}`).join(","),
         p: page.toString(),
         url: ctx.url,
+        text: ctx.text,
+
+        anchorIdx: ctx.anchorIdx.toString(),
+        focusIdx: ctx.focusIdx.toString(),
+        anchorOffset: ctx.anchorOffset.toString(),
+        focusOffset: ctx.focusOffset.toString(),
     };
 }
 
@@ -39,6 +57,12 @@ function deserializeCommaArray(x: string): number[] {
     });
 }
 
+function validInt(x: string): number {
+    const p = parseInt(x);
+    invariant(!isNaN(p), `Invalid number: ${x}`);
+    return p;
+}
+
 export function fromURLSearchParams(ctx: SubmitContextSerialized): SubmitContext {
     const raw = JSON.stringify(ctx);
     const msg = `invalid submission context: ${raw}`;
@@ -46,6 +70,7 @@ export function fromURLSearchParams(ctx: SubmitContextSerialized): SubmitContext
     invariant(typeof ctx.p === "string", "page: " + msg);
     invariant(typeof ctx.rects === "string", "rects: " + msg);
     invariant(typeof ctx.url === "string", "rects: " + msg);
+    invariant(typeof ctx.text === "string", "text: " + msg);
 
     const { ltwh: rawLtwh, rects: rawRects, p: rawPage } = ctx;
     const ltwh = deserializeCommaArray(rawLtwh);
@@ -68,5 +93,10 @@ export function fromURLSearchParams(ctx: SubmitContextSerialized): SubmitContext
         height: ltwh[3],
         page,
         rects,
+        text: ctx.text,
+        anchorIdx: validInt(ctx.anchorIdx),
+        focusIdx: validInt(ctx.focusIdx),
+        anchorOffset: validInt(ctx.anchorOffset),
+        focusOffset: validInt(ctx.focusOffset),
     };
 }

@@ -163,6 +163,10 @@ function Page(
         const spans = Array.from(pageTextContainer.querySelectorAll<HTMLSpanElement>(Array.from(ids).join(", ")));
         const idToSpan = _.fromPairs(spans.map(span => [span.id, span]));
 
+        console.log("HIGHLIGHTS");
+        console.log(highlights);
+        console.log(spans);
+
         let allRects: HighlightState["rects"] = [];
         const idToRects: HighlightState["idToRects"] = {};
         for (const { anchorId, focusId, anchorOffset, focusOffset, id } of highlights) {
@@ -172,10 +176,15 @@ function Page(
             invariant(start, `${pageNum}: no element with id: ${anchorId}`);
             invariant(end, `${pageNum}: no element with id: ${focusId}`);
 
+            console.log("START", "END");
+            console.log(start, end);
+
             const rects = makeRects(start, end, { x, y, anchorOffset, focusOffset });
             idToRects[id] = rects;
             allRects = allRects.concat(rects.map(rect => ({ rect, id })));
         }
+
+        if (allRects.length === 0) return;
 
         // Flatbush performs very fast geometric queries in exchange for
         // not being able to update the data structure after construction

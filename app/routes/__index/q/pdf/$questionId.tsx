@@ -33,8 +33,6 @@ export const action: ActionFunction = async ({ request, params }) => {
 };
 
 export const loader: LoaderFunction = async ({ request, context, params }) => {
-    console.log("PARAMS");
-    console.log(params.questionId);
     return json({});
     // console.log(`LOADER IS GETTING CALLED WITH: ${JSON.stringify(db, null, 2)}`);
     // return json(db);

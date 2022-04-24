@@ -30,6 +30,12 @@ export type MouseUpContext = SelectionContext & {
     scale: number;
     rects: Rect[];
     page: number;
+    text: string;
+
+    anchorIdx: number;
+    anchorOffset: number;
+    focusIdx: number;
+    focusOffset: number;
 };
 
 type ViewerProps = {
@@ -225,14 +231,25 @@ function Viewer({ doc, firstPage, width, height, onSelection, highlights, pageTo
     const onMouseUp = useCallback(() => {
         const ctx = processSelection(document.getSelection());
         if (ctx) {
-            const { anchorNode, focusNode, anchorOffset, focusOffset } = ctx;
-            const [page, _] = fromId(anchorNode.id);
+            const { anchorNode, focusNode, anchorOffset, focusOffset, text } = ctx;
+            const [page, anchorIdx] = fromId(anchorNode.id);
+            const [_, focusIdx] = fromId(focusNode.id);
             const pageTextId = getPageTextId(page);
             const pageTextContainer = document.getElementById(pageTextId);
             invariant(pageTextContainer, `id: ${pageTextId} not found`);
             const { x, y } = pageTextContainer.getBoundingClientRect();
             const rects = makeRects(anchorNode, focusNode, { x, y, anchorOffset, focusOffset });
-            onSelection({ ...ctx, rects, scale: viewport!!.scale, page });
+            onSelection({
+                ...ctx,
+                rects,
+                scale: viewport!!.scale,
+                page,
+                text,
+                anchorOffset,
+                focusOffset,
+                anchorIdx,
+                focusIdx,
+            });
         } else onSelection(null);
     }, [viewport]);
 

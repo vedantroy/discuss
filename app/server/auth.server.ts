@@ -2,7 +2,7 @@ import { createCookieSessionStorage } from "remix";
 import { Authenticator, AuthorizationError } from "remix-auth";
 import { OAuth2Profile, OAuth2Strategy, OAuth2StrategyVerifyParams } from "remix-auth-oauth2";
 import { GoogleExtraParams, GoogleProfile, GoogleStrategy, SocialsProvider } from "remix-auth-socials";
-import { getUserFromGoogleIdentity } from "./queries.server";
+import { getUserFromGoogleIdentity, ShortUserID } from "./queries.server";
 
 export const sessionStorage = createCookieSessionStorage({
     cookie: {
@@ -62,7 +62,7 @@ export type UserSession = {
         [SocialsProvider.GOOGLE]?: OAuth2StrategyVerifyParams<GoogleProfile, GoogleExtraParams>;
     };
     user?: {
-        shortId: string;
+        shortId: ShortUserID;
     };
 };
 

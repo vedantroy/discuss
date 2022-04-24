@@ -95,9 +95,14 @@ export default function({ url: docSource, highlights, docId }: PDFWindowProps) {
                             height: scale(height),
                         })),
                         page: ctx.page,
+                        text: ctx.text,
+                        anchorIdx: ctx.anchorIdx,
+                        focusIdx: ctx.focusIdx,
+                        anchorOffset: ctx.anchorOffset,
+                        focusOffset: ctx.focusOffset,
                     }));
 
-                    const url = `${location.protocol}//${location.host}/d/pdf/${docId}/submit`;
+                    const url = `${location.protocol}//${location.host}/submit/pdf/${docId}`;
                     const urlWithParams = `${url}?${params.toString()}`;
                     window.open(urlWithParams, "_blank")!!.focus();
                 }

@@ -1,3 +1,5 @@
+// TODO: scrap the hidden input
+// not worth doing now since i'll (soon) switch over to WSIWYG editor anyways
 // https://github.com/airjp73/remix-validated-form/discussions/98
 import { useState } from "react";
 import { useField } from "remix-validated-form";
@@ -14,7 +16,6 @@ type TextAreaProps = {
 const ValidatedTextarea = ({ name, /* onChange, */ className, defaultValue }: TextAreaProps) => {
     const { error, getInputProps } = useField(name);
     const { onBlur, onChange, ...rest } = getInputProps({ id: name });
-    console.log(rest);
     const [text, setText] = useState(defaultValue || "");
     return (
         <div>

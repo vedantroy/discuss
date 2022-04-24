@@ -5,10 +5,16 @@ import invariant from "tiny-invariant";
 import type { Brand } from "ts-brand";
 import { PDFPost } from "~/../dbschema/edgeql-js/types";
 import { Rect } from "~/components/PDFWindow/types";
+import { reportQuery } from "~/debug/query";
 import db, { e } from "~/server/edgedb.server";
 
+export type ShortUserID = Brand<string, "ShortUserID">;
+export type ShortClubID = Brand<string, "ShortClubID">;
+export type ShortDocumentID = Brand<string, "ShortDocumentID">;
+export type ShortQuestionID = Brand<string, "ShortQuestionID">;
+
 // Get the Google OAuth data if it exists
-export async function getUserFromGoogleIdentity(sub: string): Promise<{ shortId: string } | null> {
+export async function getUserFromGoogleIdentity(sub: string): Promise<{ shortId: ShortUserID } | null> {
     const query = e.select(e.GoogleIdentity, google => ({
         user: {
             shortId: true,
@@ -16,11 +22,9 @@ export async function getUserFromGoogleIdentity(sub: string): Promise<{ shortId:
         filter: e.op(google.sub, "=", sub),
     }));
     const r = await query.run(db);
-    return r?.user || null;
+    return r?.user ? { shortId: r.user.shortId as ShortUserID } : null;
 }
 
-export type ShortUserID = Brand<string, "ShortUserID">;
-export type ShortClubID = Brand<string, "ShortClubID">;
 export type CreateUser = {
     displayName: string;
     email: string;
@@ -65,8 +69,6 @@ export type DocumentPayload<T> = {
 export type DocumentStatus<T> =
     | { type: DocumentStatusCode["MISSING"] }
     | { type: DocumentStatusCode["VALID"]; payload: DocumentPayload<T> };
-
-export type ShortDocumentID = Brand<string, "ShortDocumentID">;
 
 // Gonna flex my type checking on you
 const pdfHighlightFields = [
@@ -169,7 +171,7 @@ type PDFPostProps = {
     excerpt: string;
 };
 
-export async function createPDFPost(props: CommonPostProps & PDFPostProps): Promise<ShortDocumentID> {
+export async function createPDFPost(props: CommonPostProps & PDFPostProps): Promise<ShortQuestionID> {
     const shortId = nanoid();
     const query = e.insert(e.PDFPost, {
         shortId,
@@ -188,9 +190,12 @@ export async function createPDFPost(props: CommonPostProps & PDFPostProps): Prom
         page: props.page,
         excerpt: props.excerpt,
     });
-    console.log("RUNNING");
-    console.log(query.toEdgeQL());
 
+    const start = performance.now();
     await query.run(db);
-    return shortId as ShortDocumentID;
+    const end = performance.now();
+
+    reportQuery({ edgeql: query.toEdgeQL(), durationMs: end - start });
+
+    return shortId as ShortQuestionID;
 }
