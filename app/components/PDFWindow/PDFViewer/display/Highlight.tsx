@@ -4,9 +4,10 @@ type HighlightProps = {
     rects: Rect[];
     id: string;
     active: boolean;
+    cursor?: boolean;
 };
 
-const highlight: React.FC<HighlightProps> = ({ rects, active }) => {
+const highlight: React.FC<HighlightProps> = ({ rects, active, cursor }) => {
     return (
         <>
             {rects.map(({ x, y, width, height }, i) => (

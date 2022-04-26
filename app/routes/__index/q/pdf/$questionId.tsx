@@ -229,7 +229,7 @@ export default function() {
         score,
         content,
         page,
-        document: { url },
+        document: { url, shortId: docShortId },
         rects,
         excerptRect,
         user: { image, shortId: userId, displayName },
@@ -263,6 +263,7 @@ export default function() {
                     <div className="divider w-full h-0 my-0 mt-2 mb-6"></div>
                     <PostFrame id={shortId} type="post" score={score}>
                         <PreviewViewer
+                            clickUrl={`/d/pdf/${docShortId}`}
                             className="w-full"
                             pageRects={{ rects, outline: excerptRect }}
                             page={page}

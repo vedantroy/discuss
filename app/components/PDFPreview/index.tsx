@@ -1,7 +1,7 @@
 import { PDFPageProxy } from "pdfjs-dist/types/src/display/api";
-import { createContext, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Link } from "remix";
 import invariant from "tiny-invariant";
-import { SubmitContext } from "~/api-transforms/submitContext";
 import Highlight from "../PDFWindow/PDFViewer/display/Highlight";
 import { Rect } from "../PDFWindow/types";
 import useContainerDimensions from "./useContainerDimensions";
@@ -17,12 +17,14 @@ type PreviewViewProps = {
     url: string;
     pageRects: PageRects;
     page: number;
+    clickUrl?: string;
 };
 
 type PageProps = {
     containerWidth: number;
     page: PDFPageProxy;
     pageRects: PageRects;
+    clickUrl?: string;
 };
 
 // There's some post MVP stuff I need to do here where resizing back down
@@ -114,7 +116,10 @@ function Page({ pageRects, page, containerWidth }: PageProps) {
     return (
         <div className="relative">
             <canvas hidden={true} ref={sourceCanvasRef} width={srcW} height={srcH} />
-            <div className="shadow cursor-pointer" style={{ width: destW, height: destH }}>
+            <div
+                className={`shadow`}
+                style={{ width: destW, height: destH }}
+            >
                 <canvas
                     ref={destCanvasRef}
                     width={containerWidth}
@@ -128,7 +133,7 @@ function Page({ pageRects, page, containerWidth }: PageProps) {
     );
 }
 
-export default function PreviewViewer({ url, page, className, pageRects }: PreviewViewProps) {
+export default function PreviewViewer({ url, page, className, pageRects, clickUrl }: PreviewViewProps) {
     const divRef = useRef<HTMLDivElement | null>(null);
     const { width, height } = useContainerDimensions(divRef);
     const doc = usePDFDoc(url);
@@ -147,7 +152,13 @@ export default function PreviewViewer({ url, page, className, pageRects }: Previ
     return (
         <div className={className} ref={divRef}>
             {((width !== 0 && height !== 0) && pageProxy)
-                ? <Page page={pageProxy} containerWidth={width} pageRects={pageRects} />
+                ? (clickUrl
+                    ? (
+                        <Link prefetch="render" target="_blank" to={clickUrl}>
+                            <Page page={pageProxy} containerWidth={width} pageRects={pageRects} />
+                        </Link>
+                    )
+                    : <Page page={pageProxy} containerWidth={width} pageRects={pageRects} />)
                 : <div>loading ...</div>}
         </div>
     );
