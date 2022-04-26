@@ -2577,10 +2577,6 @@ html {
   z-index: 20;
 }
 
-.col-start-2 {
-  grid-column-start: 2;
-}
-
 .m-\[1px\] {
   margin: 1px;
 }

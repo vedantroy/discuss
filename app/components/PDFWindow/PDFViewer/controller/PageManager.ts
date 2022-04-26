@@ -6,6 +6,7 @@ import { makeDoNotCallMe } from "./helpers";
 const EventType = {
     GO_TO_PAGE: "go_to_page",
     SET_Y: "set_y",
+    GO_TO_Y: "go_to_y",
     ZOOM: "zoom",
     RENDER_FINISHED: "render_finished",
     DESTROY_FINISHED: "destroy_finished",
@@ -14,7 +15,8 @@ type EventType = typeof EventType[keyof typeof EventType];
 
 type Event =
     | { type: (typeof EventType.SET_Y); y: number }
-    | { type: (typeof EventType.GO_TO_PAGE); page: number }
+    | { type: (typeof EventType.GO_TO_Y); y: number }
+    | { type: (typeof EventType.GO_TO_PAGE); page: number; offset: number }
     | { type: (typeof EventType.ZOOM); scale: number }
     | ({
         type: (typeof EventType.RENDER_FINISHED | typeof EventType.DESTROY_FINISHED);
@@ -92,6 +94,15 @@ export function makeRenderQueues(pages: number, pageBufferSize: number): Readonl
         queues[currentPage - 1] = queue;
     }
     return queues;
+}
+
+// this was extracted but it turns out i didn't need to cus
+// i'm a bad programmer :(((
+function getPageFromY({ vGap, pageHeight, y }: { vGap: number; pageHeight: number; y: number }): number {
+    const pageWithVGap = pageHeight + vGap;
+    const pagesOutOfScreen = Math.floor(y / pageWithVGap);
+    const remainingPixels = y % pageWithVGap;
+    return 1 + pagesOutOfScreen + (remainingPixels > vGap + pageHeight / 2 ? 1 : 0);
 }
 
 export default class PageManager {
@@ -234,13 +245,20 @@ export default class PageManager {
         this.#events.push({ type: EventType.RENDER_FINISHED, page });
     };
 
-    goToPage = (page: number) => {
+    goToPage = (page: number, offset: number = 0) => {
         this.#assertValidPage(page);
-        this.#events.push({ type: EventType.GO_TO_PAGE, page });
+        this.#events.push({ type: EventType.GO_TO_PAGE, page, offset });
     };
 
     setZoom = (scale: number) => {
         this.#events.push({ type: EventType.ZOOM, scale });
+    };
+
+    // this method is currently not needed
+    goToY = (y: number) => {
+        const height = this.height;
+        invariant(0 <= y && y <= this.height(), `${y} > ${height}`);
+        this.#events.push({ type: EventType.GO_TO_Y, y });
     };
 
     setY = (y: number) => {
@@ -250,14 +268,7 @@ export default class PageManager {
     };
 
     #setY(y: number) {
-        const pageWithVGap = this.#pageHeight + this.#vGap;
-        const pagesOutOfScreen = Math.floor(y / pageWithVGap);
-        const remainingPixels = y % pageWithVGap;
-        return {
-            page: 1
-                + pagesOutOfScreen
-                + (remainingPixels > this.#vGap + this.#pageHeight / 2 ? 1 : 0),
-        };
+        return { page: getPageFromY({ vGap: this.#vGap, pageHeight: this.#pageHeight, y }) };
     }
 
     #loop = () => {
@@ -288,6 +299,7 @@ export default class PageManager {
             const { type } = event;
             switch (type) {
                 case EventType.SET_Y:
+                case EventType.GO_TO_Y:
                 case EventType.GO_TO_PAGE:
                     movementEvent = { event, idx: i };
                     break;
@@ -345,15 +357,20 @@ export default class PageManager {
         if (movementEvent !== null) {
             const { event } = movementEvent;
             if (event.type === EventType.GO_TO_PAGE) {
-                const { page } = event;
+                const { page, offset } = event;
                 const { x, y } = this.#goToPage(page);
-                this.#y = y;
+                this.#y = y + offset;
                 newUpdate = { ...newUpdate, x, y: this.#y, page };
-            } else {
-                invariant(event.type === EventType.SET_Y, `invalid type: ${event.type}`);
+            } else if (event.type === EventType.SET_Y) {
                 const { page } = this.#setY(event.y);
                 this.#y = event.y;
                 newUpdate = { ...newUpdate, page };
+            } else {
+                invariant(event.type === EventType.GO_TO_Y, `invalid event: ${event.type}`);
+                const { y } = event;
+                const { page } = this.#setY(y);
+                this.#y = y;
+                newUpdate = { ...newUpdate, page, y: y };
             }
             this.#currentPage = newUpdate.page!!;
         }

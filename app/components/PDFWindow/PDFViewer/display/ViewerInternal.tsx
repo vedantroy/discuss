@@ -2,7 +2,7 @@ import * as pdfjs from "pdfjs-dist";
 import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist/types/src/display/api";
 import { PageViewport } from "pdfjs-dist/types/src/display/display_utils";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import PageManager, { makeRenderQueues, PageState } from "../controller/PageManager";
+import PageManager, { getPageFromY, makeRenderQueues, PageState } from "../controller/PageManager";
 import Footer from "./Footer";
 import Page, { RenderState } from "./Page";
 
@@ -42,10 +42,15 @@ type ViewerProps = {
     // We can't do anything till we have the document ...
     doc: PDFDocumentProxy;
     firstPage: number;
+    firstPageOffset: number;
+    // firstPage: number;
     width: number;
     height: number;
     highlights: PostHighlight[];
     pageToHighlights: Record<number, PostHighlight[]>;
+
+    baseWidth: number;
+    baseHeight: number;
 
     onSelection: (ctx: MouseUpContext | null) => void;
 };
@@ -61,7 +66,7 @@ function isNum(x: unknown): x is number {
     return typeof x === "number";
 }
 
-function Viewer({ doc, firstPage, width, height, onSelection, highlights, pageToHighlights }: ViewerProps) {
+function Viewer({ doc, height, onSelection, pageToHighlights, firstPageOffset, baseHeight, firstPage }: ViewerProps) {
     const forceUpdate: () => void = useState()[1].bind(null, {} as any);
 
     const [activeHighlights, setActiveHighlights] = useState<Set<string>>(new Set());
@@ -125,7 +130,7 @@ function Viewer({ doc, firstPage, width, height, onSelection, highlights, pageTo
     }
 
     if (pm && startupState === StartupState.PAGE_MANAGER_LOADED) {
-        pm.goToPage(firstPage);
+        pm.goToPage(firstPage, firstPageOffset);
         setStartupState(StartupState.WENT_TO_FIRST_PAGE);
     }
 
@@ -187,6 +192,8 @@ function Viewer({ doc, firstPage, width, height, onSelection, highlights, pageTo
         () => {
             // Pages are only displayed if the page manager exists ...
             if (!pm) return [];
+
+            console.log("RENDERING PAGES: " + pageStates.length);
 
             return pageStates.map((state, idx) => {
                 const style = {

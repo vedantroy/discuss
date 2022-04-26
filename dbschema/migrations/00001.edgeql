@@ -1,4 +1,4 @@
-CREATE MIGRATION m1jv5e6cnlk6ru2lrfcegdlt632mq5ib6mh4h2pftd7clz4uwd5ema
+CREATE MIGRATION m15wbxm7ueovts2hhbb4fs4dor6ve6wbf6vag45ah53mi7whz65leq
     ONTO initial
 {
   CREATE TYPE default::Answer {
@@ -83,6 +83,8 @@ CREATE MIGRATION m1jv5e6cnlk6ru2lrfcegdlt632mq5ib6mh4h2pftd7clz4uwd5ema
       CREATE MULTI LINK documents := (.<club[IS default::Document]);
   };
   CREATE TYPE default::PDF EXTENDING default::Document {
+      CREATE REQUIRED PROPERTY baseHeight -> std::int16;
+      CREATE REQUIRED PROPERTY baseWidth -> std::int16;
       CREATE REQUIRED PROPERTY url -> std::str;
   };
   CREATE ABSTRACT TYPE default::Identity {

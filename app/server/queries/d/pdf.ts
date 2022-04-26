@@ -17,6 +17,8 @@ const pdfHighlightFields = [
 type PDFHighlightField = typeof pdfHighlightFields[number];
 export type PDFContext = {
     url: string;
+    width: number;
+    height: number;
     highlights: Array<Pick<PDFPost, PDFHighlightField>>;
 };
 
@@ -55,6 +57,8 @@ export async function getPDFAndClub(
 
     const docCtxQuery = e.select(e.PDF, pdf => ({
         url: true,
+        baseWidth: true,
+        baseHeight: true,
         posts: _.fromPairs(pdfHighlightFields.map(k => [k, true])) as Record<PDFHighlightField, true>,
         filter: e.op(pdf.shortId, "=", docId),
         limit: 1,
@@ -76,6 +80,8 @@ export async function getPDFAndClub(
             clubName: club.name,
             clubId: club.shortId as ShortClubID,
             docCtx: {
+                width: docCtx.baseWidth,
+                height: docCtx.baseHeight,
                 url: docCtx.url,
                 highlights: docCtx.posts,
             },

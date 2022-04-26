@@ -4,6 +4,7 @@ import * as pdfjs from "pdfjs-dist";
 import { PDFDocumentProxy } from "pdfjs-dist";
 import { useCallback, useEffect, useRef, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
+import { useSearchParams } from "remix";
 import invariant from "tiny-invariant";
 import { toURLSearchParams } from "~/api-transforms/submitContext";
 import { getDeepLinkParams } from "./PDFViewer/display/deepLink";
@@ -13,6 +14,8 @@ import useWindowDimensions from "./useWindowDimensions";
 
 type PDFWindowProps = {
     url: string;
+    width: number;
+    height: number;
     highlights: PostHighlight[];
     docId: string;
 };
@@ -24,10 +27,22 @@ type ToastIds = {
 const HOTKEY_LINK = "l";
 const HOTKEY_POST = "p";
 
-export default function({ url: docSource, highlights, docId }: PDFWindowProps) {
+function getNumParam(params: URLSearchParams, key: string, defaultValue: number): number {
+    const value = params.get(key);
+    if (value === null) {
+        return defaultValue;
+    }
+    return parseInt(value);
+}
+
+export default function({ url: docSource, highlights, docId, width: pdfWidth, height: pdfHeight }: PDFWindowProps) {
     const [loaded, setLoaded] = useState(false);
     const docRef = useRef<PDFDocumentProxy | null>(null);
     const { width, height } = useWindowDimensions();
+
+    const [params, __] = useSearchParams();
+    const firstPage = getNumParam(params, "page", 0);
+    const pageOffset = getNumParam(params, "pageOffset", 0);
 
     useEffect(() => {
         async function go() {
@@ -118,9 +133,12 @@ export default function({ url: docSource, highlights, docId }: PDFWindowProps) {
         <div>
             <Toaster reverseOrder={true} position="bottom-right" />
             <Viewer
+                baseWidth={pdfWidth}
+                baseHeight={pdfHeight}
+                firstPage={firstPage}
+                firstPageOffset={pageOffset}
                 pageToHighlights={pageToHighlights}
                 highlights={highlights}
-                firstPage={1}
                 width={width}
                 height={height}
                 doc={docRef.current!!}

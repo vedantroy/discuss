@@ -31,6 +31,8 @@ module default {
 	type PDF extending Document {
 		required property url -> str;
 		multi link posts := .<document[is PDFPost];
+		required property baseWidth -> int16;
+		required property baseHeight -> int16;
 	}
 
 	type User {

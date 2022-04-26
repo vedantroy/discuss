@@ -36,5 +36,7 @@ export default function Index() {
         ...rest,
     }));
 
-    return <Viewer docId={docId} highlights={highlights} url={data.docCtx.url} />;
+    console.log(data.docCtx);
+    const { url, width, height } = data.docCtx;
+    return <Viewer width={width} height={height} docId={docId} highlights={highlights} url={url} />;
 }
