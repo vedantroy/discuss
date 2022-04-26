@@ -1,9 +1,10 @@
-CREATE MIGRATION m1t2uixnld4i3fopfrvqrtgs7tsvdemovdcfxty726peep5qxudzoq
+CREATE MIGRATION m1jv5e6cnlk6ru2lrfcegdlt632mq5ib6mh4h2pftd7clz4uwd5ema
     ONTO initial
 {
   CREATE TYPE default::Answer {
       CREATE REQUIRED PROPERTY content -> std::str;
       CREATE REQUIRED PROPERTY createdAt -> std::datetime;
+      CREATE REQUIRED PROPERTY score -> std::int16;
   };
   CREATE ABSTRACT TYPE default::Post {
       CREATE REQUIRED PROPERTY content -> std::str;
@@ -51,6 +52,17 @@ CREATE MIGRATION m1t2uixnld4i3fopfrvqrtgs7tsvdemovdcfxty726peep5qxudzoq
   ALTER TYPE default::User {
       CREATE MULTI LINK answers := (.<user[IS default::Answer]);
   };
+  CREATE ABSTRACT TYPE default::Vote {
+      CREATE REQUIRED LINK user -> default::User;
+      CREATE REQUIRED PROPERTY createdAt -> std::datetime;
+      CREATE REQUIRED PROPERTY up -> std::bool;
+  };
+  CREATE TYPE default::AnswerVote EXTENDING default::Vote {
+      CREATE REQUIRED LINK answer -> default::Answer;
+  };
+  ALTER TYPE default::Answer {
+      CREATE MULTI LINK votes := (.<answer[IS default::AnswerVote]);
+  };
   CREATE TYPE default::Club {
       CREATE MULTI LINK users -> default::User;
       CREATE REQUIRED PROPERTY name -> std::str;
@@ -97,14 +109,11 @@ CREATE MIGRATION m1t2uixnld4i3fopfrvqrtgs7tsvdemovdcfxty726peep5qxudzoq
   ALTER TYPE default::Post {
       CREATE REQUIRED LINK user -> default::User;
   };
-  CREATE TYPE default::Vote {
+  CREATE TYPE default::PostVote EXTENDING default::Vote {
       CREATE REQUIRED LINK post -> default::Post;
-      CREATE REQUIRED LINK user -> default::User;
-      CREATE REQUIRED PROPERTY createdAt -> std::datetime;
-      CREATE REQUIRED PROPERTY up -> std::bool;
   };
   ALTER TYPE default::Post {
-      CREATE MULTI LINK votes := (.<post[IS default::Vote]);
+      CREATE MULTI LINK votes := (.<post[IS default::PostVote]);
   };
   ALTER TYPE default::User {
       CREATE MULTI LINK posts := (.<user[IS default::Post]);

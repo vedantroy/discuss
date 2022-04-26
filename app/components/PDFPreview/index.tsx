@@ -114,7 +114,7 @@ function Page({ pageRects, page, containerWidth }: PageProps) {
     return (
         <div className="relative">
             <canvas hidden={true} ref={sourceCanvasRef} width={srcW} height={srcH} />
-            <div className="shadow cursor-pointer p-1" style={{ width: destW, height: destH }}>
+            <div className="shadow cursor-pointer" style={{ width: destW, height: destH }}>
                 <canvas
                     ref={destCanvasRef}
                     width={containerWidth}

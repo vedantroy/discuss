@@ -63,7 +63,7 @@ module default {
 	}
 	
 	abstract type Post {
-		multi link votes := .<post[is Vote];
+		multi link votes := .<post[is PostVote];
 		multi link answers := .<post[is Answer];
 		required property shortId -> str {
 			constraint exclusive;
@@ -104,16 +104,25 @@ module default {
 	type Answer {
 		required property createdAt -> datetime;
 		required property content -> str;
+		multi link votes := .<answer[is AnswerVote];
 
 		required link user -> User;
+		required link post -> Post;
+		# cached
+		required property score -> int16;
+	}
+
+	abstract type Vote {
+		required property createdAt -> datetime;
+		required property up -> bool;
+		required link user -> User;
+	}
+
+	type PostVote extending Vote {
 		required link post -> Post;
 	}
 
-	type Vote {
-		required property createdAt -> datetime;
-		required property up -> bool;
-EDGEDB 
-		required link user -> User;
-		required link post -> Post;
+	type AnswerVote extending Vote {
+		required link answer -> Answer;
 	}
 }

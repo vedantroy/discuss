@@ -2,7 +2,8 @@ import { createCookieSessionStorage } from "remix";
 import { Authenticator, AuthorizationError } from "remix-auth";
 import { OAuth2Profile, OAuth2Strategy, OAuth2StrategyVerifyParams } from "remix-auth-oauth2";
 import { GoogleExtraParams, GoogleProfile, GoogleStrategy, SocialsProvider } from "remix-auth-socials";
-import { getUserFromGoogleIdentity, ShortUserID } from "./queries.server";
+import { getUserFromGoogleIdentity } from "./queries/auth";
+import { ShortUserID } from "./queries/common";
 
 export const sessionStorage = createCookieSessionStorage({
     cookie: {
@@ -25,9 +26,6 @@ declare global {
 }
 
 export const SESSION_REDIRECT_KEY = "auth:redirect";
-type GenericRedirect = {
-    route: string;
-};
 
 // Auth state flows:
 

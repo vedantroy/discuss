@@ -11,7 +11,8 @@ import ValidatedInput from "~/components/primitives/validatedInput";
 import { getParam } from "~/route-utils/params";
 import { getSession, setSessionHeader } from "~/route-utils/session";
 import { authenticator, UserSession } from "~/server/auth.server";
-import { insertUserWithGoogleIdentity } from "~/server/queries.server";
+import { insertUserWithGoogleIdentity } from "~/server/queries/auth";
+import { ShortUserID } from "~/server/queries/common";
 
 function makeConsecutiveChecker(char: string, n: number, prefix: string) {
     invariant(char.length === 1, `not character: ${char}`);
@@ -90,7 +91,7 @@ export let action: ActionFunction = async ({ request, params }) => {
     const session = await getSession(request);
     const newSession: UserSession = {
         meta: { userExists: true },
-        user: { shortId: userId },
+        user: { shortId: userId as ShortUserID },
     };
     session.set(authenticator.sessionKey, newSession);
     return redirect(`/login`, {

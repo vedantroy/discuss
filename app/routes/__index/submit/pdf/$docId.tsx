@@ -10,7 +10,8 @@ import ValidatedTextarea from "~/components/primitives/validatedTextarea";
 import { getParam } from "~/route-utils/params";
 import { isLoggedIn } from "~/route-utils/session";
 import { authenticator } from "~/server/auth.server";
-import { createPDFPost, ShortDocumentID } from "~/server/queries.server";
+import { ShortDocumentID } from "~/server/queries/common";
+import { createPDFPost } from "~/server/queries/submit/pdf";
 import SUBMIT_CSS from "~/styles/submit.css";
 
 export function links() {
@@ -44,15 +45,15 @@ const validator = withYup(
 );
 
 export const action: ActionFunction = async ({ request, params }) => {
-    const fieldValues = await validator.validate(await request.formData());
-    if (fieldValues.error) return validationError(fieldValues.error);
-
     const docId = getParam(params, "docId");
     const userData = await authenticator.isAuthenticated(request);
     const user = isLoggedIn(userData);
     if (!user) {
         return new Response("Unauthorized", { status: 401 });
     }
+
+    const fieldValues = await validator.validate(await request.formData());
+    if (fieldValues.error) return validationError(fieldValues.error);
 
     const { data } = fieldValues;
     const title = data[INPUT_TITLE];

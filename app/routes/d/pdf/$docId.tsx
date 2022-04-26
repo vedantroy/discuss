@@ -5,14 +5,8 @@ import Viewer from "~/components/PDFWindow";
 import PDF_CSS from "~/components/PDFWindow/PDFViewer/styles/page.css";
 import { getParam } from "~/route-utils/params";
 import { authenticator } from "~/server/auth.server";
-import {
-    DocumentPayload,
-    getPDFAndClub,
-    ObjectStatusCode,
-    PDFContext,
-    ShortDocumentID,
-    ShortUserID,
-} from "~/server/queries.server";
+import { DocumentPayload, ObjectStatusCode, ShortDocumentID, ShortUserID } from "~/server/queries/common";
+import { getPDFAndClub, PDFContext } from "~/server/queries/d/pdf";
 
 export function links() {
     return [{ rel: "stylesheet", href: PDF_CSS }];
