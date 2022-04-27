@@ -27,9 +27,6 @@ export async function getPDFAndClub(
     userId?: ShortUserID | null,
 ): Promise<ClubResource<DocumentPayload<PDFContext>>> {
     const query = e.select(e.Document, doc => ({
-        // __type__: {
-        //    name: true,
-        // },
         club: {
             public: true,
             shortId: true,

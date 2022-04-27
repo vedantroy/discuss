@@ -41,7 +41,7 @@ export default function({ url: docSource, highlights, docId, width: pdfWidth, he
     const { width, height } = useWindowDimensions();
 
     const [params, __] = useSearchParams();
-    const firstPage = getNumParam(params, "page", 0);
+    const firstPage = getNumParam(params, "page", 1);
     const pageOffset = getNumParam(params, "pageOffset", 0);
 
     useEffect(() => {

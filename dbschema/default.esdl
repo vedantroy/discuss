@@ -64,8 +64,20 @@ module default {
 		required property email -> str;
 	}
 
-	abstract type Post {
-		multi link votes := .<post[is PostVote];
+	abstract type Votable {
+		multi link votes := .<votable[is Vote];
+		required property score := (
+			select sum(1 if .<votable[is Vote].up else -1)
+		);
+		required property upVotes := (
+			select count(.<votable[is Vote].up = true)
+		);
+		required property downVotes := (
+			select count(.<votable[is Vote].up = false)
+		);
+	}
+
+	abstract type Post extending Votable {
 		multi link answers := .<post[is Answer];
 		required property shortId -> str {
 			constraint exclusive;
@@ -74,20 +86,6 @@ module default {
 		required property createdAt -> datetime;
 		required property title -> str;
 		required property content -> str;
-		# Cached value of the post's score (instead of querying votes everytime)
-		required property score -> int16;
-
-
-		# TODO: Solve repetition ...
-		required property score := (
-			select sum(1 if .<post[is PostVote].up else -1)
-		)
-		# required property upVotes := (
-		# 	select count(.<post[is PostVote].up = true)
-		# );
-		# required property downVotes := (
-		# 	select count(.<post[is PostVote].up = false)
-		# );
 	}
 
 	type PDFPost extending Post {
@@ -115,39 +113,19 @@ module default {
 		required property height -> int16;
 	}
 
-	type Answer {
+	type Answer extending Votable {
 		required property createdAt -> datetime;
 		required property content -> str;
-		multi link votes := .<answer[is AnswerVote];
 
 		required link user -> User;
 		required link post -> Post;
-
-		# Ideally we could do 1 query instead of 2 computed props
-		required property score := (
-			select sum(1 if .<answer[is AnswerVote].up else -1)
-		)
-		# required property upVotes := (
-		# 	select count(.<answer[is AnswerVote].up = true)
-		# );
-		# required property downVotes := (
-		# 	select count(.<answer[is AnswerVote].up = false)
-		# );
 	}
 
-	abstract type Vote {
+	type Vote {
 		required property createdAt -> datetime;
 		required property up -> bool;
 		required link user -> User;
-	}
-
-	type PostVote extending Vote {
-		required link post -> Post;
-		constraint exclusive on ( (.post, .user) );
-	}
-
-	type AnswerVote extending Vote {
-		required link answer -> Answer;
-		constraint exclusive on ( (.answer, .user) );
+		required link votable -> Votable;
+		constraint exclusive on ((.user, .votable));
 	}
 }

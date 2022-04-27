@@ -19,7 +19,7 @@ import { throwNotFoundResponse } from "~/route-utils/response";
 import { isLoggedIn } from "~/route-utils/session";
 import { authenticator } from "~/server/auth.server";
 import { ObjectStatusCode, ShortQuestionID } from "~/server/queries/common";
-import { createAnswerVote, createPostVote, removeAnswerVote, removePostVote } from "~/server/queries/q/common";
+import { createVote, removeVote } from "~/server/queries/q/common";
 import { Answer, getPDFQuestion, MyVote, Question, submitAnswer } from "~/server/queries/q/pdf";
 import colors from "~/vendor/tailwindcss/colors";
 
@@ -63,38 +63,16 @@ export const action: ActionFunction = async ({ request, params }) => {
         });
     } else if (subaction == "vote") {
         const voteData = Object.fromEntries(formData);
-        const { actionType, voteType, parentType, parentId } = voteData as Record<string, string>;
-        const up = voteType === "up";
-
-        switch (parentType) {
-            case "answer":
-                switch (actionType) {
-                    case "create":
-                        createAnswerVote({ userId, answerId: parentId, up });
-                        break;
-                    case "remove":
-                        removeAnswerVote({ userId, answerId: parentId });
-                        break;
-                    default:
-                        throw new Error(`Invalid actionType: ${actionType}`);
-                }
+        const { actionType, voteType, parentId } = voteData as Record<string, string>;
+        switch (actionType) {
+            case "create":
+                await createVote({ userId, votableUUID: parentId, up: voteType === "up" });
                 break;
-            case "post":
-                const postId = parentId as ShortQuestionID;
-                switch (actionType) {
-                    case "create":
-                        console.log("CREATING POST VOTE ...");
-                        createPostVote({ userId, postId, up });
-                        break;
-                    case "remove":
-                        removePostVote({ userId, postId });
-                        break;
-                    default:
-                        throw new Error(`Invalid actionType: ${actionType}`);
-                }
+            case "remove":
+                await removeVote({ userId, votableUUID: parentId });
                 break;
             default:
-                throw new Error(`Unsupported parent type: ${parentType}`);
+                throw new Error(`Unknown action type: ${actionType}`);
         }
     }
     return null;
@@ -149,14 +127,13 @@ const AnswerHeader = ({ answers }: AnswerHeaderProps) => {
     );
 };
 
-function Arrow({ up, active, type, id }: { up: boolean; active: boolean; type: string; id: string }) {
+function Arrow({ up, active, id }: { up: boolean; active: boolean; id: string }) {
     // https://stackoverflow.com/questions/4274489/how-can-i-make-an-upvote-downvote-button
     // TODO: The SVG has unnecessary height
     return (
         <SubForm subaction="vote" className="inline" method="post">
             <input type="hidden" name="actionType" value={active ? "remove" : "create"}></input>
             <input type="hidden" name="voteType" value={up ? "up" : "down"}></input>
-            <input type="hidden" name="parentType" value={type}></input>
             <input type="hidden" name="parentId" value={id}></input>
             <button type="submit">
                 <span>
@@ -173,21 +150,21 @@ function Arrow({ up, active, type, id }: { up: boolean; active: boolean; type: s
     );
 }
 
-const Vote = ({ vote, score, type, id }: { vote?: MyVote; score: number; type: "answer" | "post"; id: string }) => (
+const Vote = ({ vote, score, id }: { vote?: MyVote; score: number; id: string }) => (
     <Col className="items-center">
-        <Arrow id={id} type={type} up={true} active={Boolean(vote && vote.up)} />
+        <Arrow id={id} up={true} active={Boolean(vote && vote.up)} />
         <div>{score}</div>
-        <Arrow id={id} type={type} up={false} active={Boolean(vote && !vote.up)} />
+        <Arrow id={id} up={false} active={Boolean(vote && !vote.up)} />
     </Col>
 );
 
 const PostFrame = (
-    { children, type, score, id }: { children: React.ReactNode; type: "answer" | "post"; score: number; id: string },
+    { children, score, id, vote }: { children: React.ReactNode; score: number; id: string; vote?: MyVote },
 ) => (
     <Row className="w-full gap-x-2">
         <Col className="items-center w-fit">
             <Col className="items-center">
-                <Vote id={id} vote={null as any} score={score} type={type} />
+                <Vote id={id} vote={vote} score={score} />
             </Col>
         </Col>
         <Col className="flex-1">{children}</Col>
@@ -196,7 +173,7 @@ const PostFrame = (
 
 const AnswerDisplay = ({ answer }: { answer: Answer }) => {
     return (
-        <PostFrame id={answer.id} type="answer" score={answer.score}>
+        <PostFrame id={answer.id} vote={answer.vote} score={answer.score}>
             <div>{answer.content}</div>
             <Row className="mt-4 w-full">
                 <QuestionBadge
@@ -224,12 +201,14 @@ export default function() {
     const data = useLoaderData<Question>();
 
     const {
+        id,
         shortId,
+        vote,
         title,
         score,
         content,
         page,
-        document: { url, shortId: docShortId, baseHeight },
+        document: { url, shortId: docShortId },
         rects,
         excerptRect,
         user: { image, shortId: userId, displayName },
@@ -238,6 +217,8 @@ export default function() {
     } = data;
 
     const createdDate = new Date(createdAt);
+
+    console.log(vote);
 
     return (
         <>
@@ -261,7 +242,7 @@ export default function() {
                         </div>
                     </div>
                     <div className="divider w-full h-0 my-0 mt-2 mb-6"></div>
-                    <PostFrame id={shortId} type="post" score={score}>
+                    <PostFrame id={id} vote={vote} score={score}>
                         <PreviewViewer
                             clickUrl={`/d/pdf/${docShortId}?page=${page}&pageOffset=${excerptRect.y}`}
                             className="w-full"
@@ -273,7 +254,7 @@ export default function() {
                         <div className="flex flex-row w-full mt-4">
                             <button
                                 onClick={(_) => {
-                                    const url = `${location.protocol}//${location.host}/q/pdf/${data.shortId}`;
+                                    const url = `${location.protocol}//${location.host}/q/pdf/${shortId}`;
                                     if (copy(url)) {
                                         toast.success(`Url copied to clipboard`);
                                     } else {

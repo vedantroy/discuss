@@ -1,39 +1,29 @@
 import { e } from "~/server/edgedb.server";
-import { runQuery, ShortQuestionID, ShortUserID, userFromId } from "../common";
+import { runQuery, ShortUserID, userFromId } from "../common";
 
-// TODO: Should we throw err if there's no vote to delete?
-export const removeAnswerVote = ({ userId, answerId }: { userId: ShortUserID; answerId: string }) =>
-    runQuery(e.delete(e.AnswerVote, vote => ({
-        filter: e.op(e.op(vote.user.shortId, "=", userId), "and", e.op(vote.answer.id, "=", e.uuid(answerId))),
+// Use ids instead of short ids b/c only posts have short ids (as of now)
+// TODO: Transition to useing ids in all DB queries -- short ids should only be
+// used for translations
+export const removeVote = ({ userId, votableUUID }: { userId: ShortUserID; votableUUID: string }) =>
+    runQuery(e.delete(e.Vote, vote => ({
+        filter: e.op(e.op(vote.user.shortId, "=", userId), "and", e.op(vote.votable.id, "=", e.uuid(votableUUID))),
     })));
 
-export const removePostVote = ({ userId, postId }: { userId: ShortUserID; postId: ShortQuestionID }) =>
-    runQuery(e.delete(e.PostVote, vote => ({
-        filter: e.op(e.op(vote.user.shortId, "=", userId), "and", e.op(vote.post.shortId, "=", postId)),
-    })));
-
-export const createPostVote = ({ userId, postId, up }: { userId: ShortUserID; postId: ShortQuestionID; up: boolean }) =>
+export const createVote = ({ userId, up, votableUUID }: { userId: ShortUserID; up: boolean; votableUUID: string }) =>
     runQuery(
-        e.insert(e.PostVote, {
+        e.insert(e.Vote, {
             user: userFromId(userId),
-            post: e.select(e.Post, post => ({ limit: 1, filter: e.op(post.shortId, "=", postId) })),
+            up,
             createdAt: e.datetime_of_transaction(),
-            up,
+            votable: e.select(e.Votable, votable => ({ filter: e.op(votable.id, "=", e.uuid(votableUUID)) })),
         }).unlessConflict(vote => ({
-            on: e.set(vote.post, vote.user),
-            up,
+            on: e.tuple([vote.votable, vote.user]),
+            else: e.update(vote, () => ({
+                set: {
+                    up,
+                    createdAt: e.datetime_of_transaction(),
+                },
+            })),
         })),
-    );
-
-export const createAnswerVote = ({ userId, answerId, up }: { userId: ShortUserID; answerId: string; up: boolean }) =>
-    runQuery(
-        e.insert(e.AnswerVote, {
-            user: userFromId(userId),
-            answer: e.select(e.Answer, answer => ({ limit: 1, filter: e.op(answer.id, "=", e.uuid(answerId)) })),
-            createdAt: e.datetime_of_transaction(),
-            up,
-        }).unlessConflict(vote => ({
-            on: e.set(vote.answer, vote.user),
-            up,
-        })),
+        { log: false },
     );

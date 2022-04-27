@@ -20,6 +20,8 @@ export type Answer = Pick<DBAnswer, "id" | "content" | "score"> & {
     createdAt: string;
 };
 export type Question = {
+    // TODO: Probably type this
+    id: string;
     vote?: MyVote;
     shortId: ShortQuestionID;
     title: string;
@@ -46,6 +48,7 @@ const Selectors = {
 
 export async function getPDFQuestion(id: ShortQuestionID, userId?: ShortUserID): Promise<QuestionStatus> {
     const query = e.select(e.PDFPost, post => ({
+        id: true,
         shortId: true,
         title: true,
         content: true,
@@ -82,7 +85,6 @@ export async function getPDFQuestion(id: ShortQuestionID, userId?: ShortUserID):
         document: {
             url: true,
             shortId: true,
-            baseHeight: true,
             club: {
                 name: true,
                 public: true,
@@ -95,6 +97,7 @@ export async function getPDFQuestion(id: ShortQuestionID, userId?: ShortUserID):
                 votes: {
                     limit: 1,
                     filter: e.op(post.votes.user.shortId, "=", userId),
+                    up: true,
                 },
             }
             : {}),
@@ -108,13 +111,16 @@ export async function getPDFQuestion(id: ShortQuestionID, userId?: ShortUserID):
     const isPublic = r.document.club.public;
     canAccessClub({ shortId, isPublic }, userId);
 
+    const { votes, ...rest } = r;
+
     return {
         type: ObjectStatusCode.VALID,
         payload: {
-            ...r,
+            ...rest,
             createdAt: r.createdAt.toISOString(),
             shortId: r.shortId as ShortQuestionID,
             answers: r.answers.map(({ createdAt, ...rest }) => ({ createdAt: createdAt.toISOString(), ...rest })),
+            vote: r.votes[0],
         },
     };
 }
@@ -133,7 +139,6 @@ export async function submitAnswer({ userId, questionId, content }: SubmitAnswer
             filter: e.op(post.shortId, "=", questionId),
         })),
         content,
-        score: 0,
         createdAt: e.datetime_of_transaction(),
     });
     await query.run(db);

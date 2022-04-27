@@ -1,15 +1,14 @@
-CREATE MIGRATION m15wbxm7ueovts2hhbb4fs4dor6ve6wbf6vag45ah53mi7whz65leq
+CREATE MIGRATION m12hinpdpwed7motymfeyvrz3v4vhlwddhxgz6tuznj6smvmff6lcq
     ONTO initial
 {
-  CREATE TYPE default::Answer {
+  CREATE ABSTRACT TYPE default::Votable;
+  CREATE TYPE default::Answer EXTENDING default::Votable {
       CREATE REQUIRED PROPERTY content -> std::str;
       CREATE REQUIRED PROPERTY createdAt -> std::datetime;
-      CREATE REQUIRED PROPERTY score -> std::int16;
   };
-  CREATE ABSTRACT TYPE default::Post {
+  CREATE ABSTRACT TYPE default::Post EXTENDING default::Votable {
       CREATE REQUIRED PROPERTY content -> std::str;
       CREATE REQUIRED PROPERTY createdAt -> std::datetime;
-      CREATE REQUIRED PROPERTY score -> std::int16;
       CREATE REQUIRED PROPERTY shortId -> std::str {
           CREATE CONSTRAINT std::exclusive;
       };
@@ -52,16 +51,24 @@ CREATE MIGRATION m15wbxm7ueovts2hhbb4fs4dor6ve6wbf6vag45ah53mi7whz65leq
   ALTER TYPE default::User {
       CREATE MULTI LINK answers := (.<user[IS default::Answer]);
   };
-  CREATE ABSTRACT TYPE default::Vote {
-      CREATE REQUIRED LINK user -> default::User;
-      CREATE REQUIRED PROPERTY createdAt -> std::datetime;
+  CREATE TYPE default::Vote {
+      CREATE REQUIRED LINK votable -> default::Votable;
       CREATE REQUIRED PROPERTY up -> std::bool;
+      CREATE REQUIRED LINK user -> default::User;
+      CREATE CONSTRAINT std::exclusive ON ((.user, .votable));
+      CREATE REQUIRED PROPERTY createdAt -> std::datetime;
   };
-  CREATE TYPE default::AnswerVote EXTENDING default::Vote {
-      CREATE REQUIRED LINK answer -> default::Answer;
-  };
-  ALTER TYPE default::Answer {
-      CREATE MULTI LINK votes := (.<answer[IS default::AnswerVote]);
+  ALTER TYPE default::Votable {
+      CREATE MULTI LINK votes := (.<votable[IS default::Vote]);
+      CREATE REQUIRED PROPERTY downVotes := (SELECT
+          std::count((.<votable[IS default::Vote].up = false))
+      );
+      CREATE REQUIRED PROPERTY score := (SELECT
+          std::sum((1 IF .<votable[IS default::Vote].up ELSE -1))
+      );
+      CREATE REQUIRED PROPERTY upVotes := (SELECT
+          std::count((.<votable[IS default::Vote].up = true))
+      );
   };
   CREATE TYPE default::Club {
       CREATE MULTI LINK users -> default::User;
@@ -110,12 +117,6 @@ CREATE MIGRATION m15wbxm7ueovts2hhbb4fs4dor6ve6wbf6vag45ah53mi7whz65leq
   };
   ALTER TYPE default::Post {
       CREATE REQUIRED LINK user -> default::User;
-  };
-  CREATE TYPE default::PostVote EXTENDING default::Vote {
-      CREATE REQUIRED LINK post -> default::Post;
-  };
-  ALTER TYPE default::Post {
-      CREATE MULTI LINK votes := (.<post[IS default::PostVote]);
   };
   ALTER TYPE default::User {
       CREATE MULTI LINK posts := (.<user[IS default::Post]);

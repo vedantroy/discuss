@@ -25,7 +25,6 @@ export async function createPDFPost(props: CommonPostProps & PDFPostProps): Prom
         createdAt: e.datetime_of_transaction(),
         title: props.title,
         content: props.content,
-        score: 0,
         user: e.select(e.User, user => ({ limit: 1, filter: e.op(user.shortId, "=", props.userId) })),
         excerptRect: e.insert(e.PDFRect, props.excerptRect),
         rects: e.set(...props.rects.map(r => e.insert(e.PDFRect, r))),
