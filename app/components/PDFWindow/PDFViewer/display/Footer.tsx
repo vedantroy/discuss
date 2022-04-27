@@ -69,7 +69,7 @@ export default function({ activeHighlights, pageToHighlights, linkedHighlights }
         .value();
 
     return (
-        <div className="flex flex-row items-center absolute bottom-0 left-0 right-0 h-32 shadow shadow-zinc-500 bg-zinc-100 z-30 overflow-x-scroll">
+        <div className="flex flex-row items-center absolute bottom-0 left-0 right-0 h-32 shadow shadow-zinc-500 bg-zinc-100 z-30 overflow-x-auto">
             {pages.map(page => (
                 <Page
                     linkedHighlights={linkedHighlights}
