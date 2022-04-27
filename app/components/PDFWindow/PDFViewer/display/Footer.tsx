@@ -44,7 +44,7 @@ const Page = ({ page, highlights, activeHighlights, linkedHighlights }: PageProp
             <div className="divider divider-horizontal my-3 text-zinc-800">{page}</div>
             <div className="flex flex-row gap-4">
                 {ordered.map(({ text, id }) => (
-                    <Card active={activeHighlights.has(id) || linkedHighlights.has(id)} text={text} />
+                    <Card key={id} active={activeHighlights.has(id) || linkedHighlights.has(id)} text={text} />
                 ))}
             </div>
         </>
@@ -58,6 +58,9 @@ type FooterProps = {
 };
 
 export default function({ activeHighlights, pageToHighlights, linkedHighlights }: FooterProps) {
+    console.log("FOOTER");
+    console.log(pageToHighlights);
+
     const pages = _(pageToHighlights)
         .keys()
         // R.C bug :) -- (parseInt takes 2 params)

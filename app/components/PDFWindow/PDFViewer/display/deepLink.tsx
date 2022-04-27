@@ -1,5 +1,4 @@
 import { PostHighlight } from "../../types";
-import { SelectionContext } from "./selection";
 import { MouseUpContext } from "./ViewerInternal";
 
 type DeepLinkParams = Record<"aId" | "fId" | "aOff" | "fOff" | "page" | "pageOffset", string>;

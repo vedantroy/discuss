@@ -212,7 +212,7 @@ function Viewer(
                     ...(idx === pageStates.length - 1 && { marginBottom: V_GAP }),
                 };
                 const pageNum = idx + 1;
-                const highlights = pageToHighlights[pageNum] || [];
+                const highlights = pageToHighlights[pageNum]?.slice() || [];
                 if (deepLinkHighlight && deepLinkHighlight.page === pageNum) {
                     highlights.push(deepLinkHighlight);
                 }
