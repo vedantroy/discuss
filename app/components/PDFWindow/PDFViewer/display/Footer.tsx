@@ -1,5 +1,6 @@
 import _ from "lodash";
 import { useState } from "react";
+import { Link } from "remix";
 import { fromId } from "~/api-transforms/spanId";
 import { PostHighlight } from "../../types";
 
@@ -43,8 +44,10 @@ const Page = ({ page, highlights, activeHighlights, linkedHighlights }: PageProp
         <>
             <div className="divider divider-horizontal my-3 text-zinc-800">{page}</div>
             <div className="flex flex-row gap-4">
-                {ordered.map(({ text, id }) => (
-                    <Card key={id} active={activeHighlights.has(id) || linkedHighlights.has(id)} text={text} />
+                {ordered.map(({ title, id }) => (
+                    <Link to={`/q/pdf/${id}`} target="_blank">
+                        <Card key={id} active={activeHighlights.has(id) || linkedHighlights.has(id)} text={title} />
+                    </Link>
                 ))}
             </div>
         </>
