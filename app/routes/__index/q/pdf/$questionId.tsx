@@ -223,13 +223,6 @@ export default function() {
     return (
         <>
             <Toaster position="bottom-right" />
-            <div className="w-full h-10 bg-gray-50 shadow shadow-gray-300 flex flex-row justify-center items-stretch">
-                <div className="h-full w-full max-w-[1264px]">
-                    <div className="cursor-pointer h-full w-fit hover:bg-gray-200 text-center grid place-items-center px-4">
-                        Collab Books!
-                    </div>
-                </div>
-            </div>
             <div className="w-full max-w-[1264px] my-0 mx-auto px-4">
                 <div className="flex flex-col">
                     <h1 className="text-3xl break-words mt-6">{title}</h1>

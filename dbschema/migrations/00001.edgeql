@@ -1,4 +1,4 @@
-CREATE MIGRATION m12hinpdpwed7motymfeyvrz3v4vhlwddhxgz6tuznj6smvmff6lcq
+CREATE MIGRATION m1qqy3thfapomedag6wnms5k4bpxkq4io3xdiv5qrbcnidnh2josta
     ONTO initial
 {
   CREATE ABSTRACT TYPE default::Votable;
@@ -40,7 +40,7 @@ CREATE MIGRATION m12hinpdpwed7motymfeyvrz3v4vhlwddhxgz6tuznj6smvmff6lcq
       CREATE REQUIRED PROPERTY createdAt -> std::datetime;
       CREATE REQUIRED PROPERTY displayName -> std::str;
       CREATE REQUIRED PROPERTY email -> std::str;
-      CREATE PROPERTY image -> std::str;
+      CREATE REQUIRED PROPERTY image -> std::str;
       CREATE REQUIRED PROPERTY shortId -> std::str {
           CREATE CONSTRAINT std::exclusive;
       };

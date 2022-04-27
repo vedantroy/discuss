@@ -91,39 +91,41 @@ export default function() {
     }, []);
 
     return (
-        <ValidatedForm
-            validator={validator}
-            method="post"
-            defaultValues={{}}
-            className="w-full h-full flex flex-row bg-gray-100 p-4 gap-4"
-        >
-            <div className="flex-1 bg-white shadow h-full p-4 font-semibold">
-                <div className="text-lg">Title</div>
-                <ValidatedInput name={INPUT_TITLE} className="w-full p-1" />
-                <div className="text-lg mt-3">Excerpt</div>
-                {ctx
-                    ? (
-                        <PreviewViewer
-                            className="w-full"
-                            pageRects={{
-                                rects: ctx.rects,
-                                outline: { x: ctx.left, y: ctx.top, width: ctx.width, height: ctx.height },
-                            }}
-                            page={ctx.page}
-                            url={ctx.url}
-                        />
-                    )
-                    : null}
-                <div className="text-lg mt-3">Body</div>
-                <ValidatedTextarea
-                    name={INPUT_CONTENT}
-                    defaultValue=""
-                    className="w-full h-52 mt-1"
-                />
-                <input name={INPUT_META} type="hidden" value={JSON.stringify(ctx)}></input>
-                <button className="btn btn-primary">Submit</button>
-            </div>
-        </ValidatedForm>
+        <div className="bg-gray-100 flex-1 z-0">
+            <ValidatedForm
+                validator={validator}
+                method="post"
+                defaultValues={{}}
+                className="w-full max-w-[1264px] flex-1 mx-auto my-0 flex flex-row p-4 gap-4"
+            >
+                <div className="flex-1 bg-white shadow h-full p-4 font-semibold">
+                    <div className="text-lg">Title</div>
+                    <ValidatedInput name={INPUT_TITLE} className="w-full p-1" />
+                    <div className="text-lg mt-3">Excerpt</div>
+                    {ctx
+                        ? (
+                            <PreviewViewer
+                                className="w-full"
+                                pageRects={{
+                                    rects: ctx.rects,
+                                    outline: { x: ctx.left, y: ctx.top, width: ctx.width, height: ctx.height },
+                                }}
+                                page={ctx.page}
+                                url={ctx.url}
+                            />
+                        )
+                        : null}
+                    <div className="text-lg mt-3">Body</div>
+                    <ValidatedTextarea
+                        name={INPUT_CONTENT}
+                        defaultValue=""
+                        className="w-full h-52 mt-1"
+                    />
+                    <input name={INPUT_META} type="hidden" value={JSON.stringify(ctx)}></input>
+                    <button className="btn btn-primary">Submit</button>
+                </div>
+            </ValidatedForm>
+        </div>
     );
 }
 

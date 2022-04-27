@@ -25,6 +25,7 @@ export async function insertUserWithGoogleIdentity(
             displayName: user.displayName,
             email: user.email,
             shortId,
+            image: user.image || "",
             createdAt: e.datetime_of_transaction(),
         }),
     });

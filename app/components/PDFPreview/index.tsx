@@ -127,7 +127,7 @@ function Page({ pageRects, page, containerWidth }: PageProps) {
                 />
             </div>
             <div className="inset-0 absolute w-0 h-0">
-                {rects ? <Highlight rects={rects} active={false} id="" /> : null}
+                {rects ? <Highlight rects={rects} active={false} /> : null}
             </div>
         </div>
     );

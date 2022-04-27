@@ -11,13 +11,17 @@ type LoaderData = {
     error: { message: string } | null;
 };
 
-export const loader: LoaderFunction = async ({ request }) => {
+export const loader: LoaderFunction = async ({ request, params }) => {
     const session = await getSession(request);
+
+    const url = new URL(request.url);
+    const redirectTo = url.searchParams.get("redirectTo");
+
     // 1. Check if the user is logged in
     const userData = await authenticator.isAuthenticated(request);
     if (userData?.meta.userExists) {
         // 2. Redirect the user to the page they were trying to access
-        const redirectRoute = await session.get(SESSION_REDIRECT_KEY);
+        const redirectRoute = await session.get(SESSION_REDIRECT_KEY) || redirectTo;
         if (redirectRoute) {
             invariant(typeof redirectRoute === "string", `invalid redirect: ${redirectRoute}`);
             // A redirect was set using `session.flash`, so follow it
@@ -32,12 +36,15 @@ export const loader: LoaderFunction = async ({ request }) => {
         }
     }
 
+    if (redirectTo) {
+        session.flash(SESSION_REDIRECT_KEY, redirectTo);
+    }
     invariant(!userData?.meta.userExists, `user is authenticated`);
     // Show the user the login screen (with an error, if there was one)
     const error = session.get(
         authenticator.sessionErrorKey,
     ) as LoaderData["error"];
-    return json<LoaderData>({ error });
+    return json<LoaderData>({ error }, { headers: await setSessionHeader(session) });
 };
 
 interface SocialButtonProps {

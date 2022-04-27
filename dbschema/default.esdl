@@ -43,7 +43,7 @@ module default {
 			constraint exclusive;
 		}
 		# null = use default (jsdenticon)
-		property image -> str;
+		required property image -> str;
 		multi link votes := .<user[is Vote];
 		multi link answers := .<user[is Answer];
 		multi link identities := .<user[is Identity];
