@@ -40,9 +40,15 @@ export default function({ url: docSource, highlights, docId, width: pdfWidth, he
     const docRef = useRef<PDFDocumentProxy | null>(null);
     const { width, height } = useWindowDimensions();
 
-    const [params, __] = useSearchParams();
+    const [params, setSearchParams] = useSearchParams();
     const firstPage = getNumParam(params, "page", 1);
     const pageOffset = getNumParam(params, "pageOffset", 0);
+    const removeParams = () => {
+        const newParams = { ...Object.fromEntries(params) };
+        delete newParams.page;
+        delete newParams.pageOffset;
+        setSearchParams(newParams);
+    };
 
     useEffect(() => {
         async function go() {
@@ -135,6 +141,7 @@ export default function({ url: docSource, highlights, docId, width: pdfWidth, he
             <Viewer
                 baseWidth={pdfWidth}
                 baseHeight={pdfHeight}
+                clearSearchParams={removeParams}
                 firstPage={firstPage}
                 firstPageOffset={pageOffset}
                 pageToHighlights={pageToHighlights}

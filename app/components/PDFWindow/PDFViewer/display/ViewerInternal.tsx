@@ -53,6 +53,7 @@ type ViewerProps = {
     baseHeight: number;
 
     onSelection: (ctx: MouseUpContext | null) => void;
+    clearSearchParams: () => void;
 };
 
 const StartupState = {
@@ -66,12 +67,16 @@ function isNum(x: unknown): x is number {
     return typeof x === "number";
 }
 
-function Viewer({ doc, height, onSelection, pageToHighlights, firstPageOffset, baseHeight, firstPage }: ViewerProps) {
+function Viewer(
+    { doc, height, onSelection, pageToHighlights, firstPageOffset, baseHeight, firstPage, clearSearchParams }:
+        ViewerProps,
+) {
     const forceUpdate: () => void = useState()[1].bind(null, {} as any);
 
     const [activeHighlights, setActiveHighlights] = useState<Set<string>>(new Set());
 
     // TODO: Get this call out of here & into the parent
+    const [paramsCleared, setParamsCleared] = useState(false);
     const [allPagesLoaded, setAllPagesLoaded] = useState(false);
     const [startupState, setStartupState] = useState<StartupState>(StartupState.NO_PAGE_MANAGER);
     const [pageStates, setPageStates] = useState<RenderState[]>(fill(new Array(doc.numPages), RenderState.NONE));
@@ -314,6 +319,10 @@ function Viewer({ doc, height, onSelection, pageToHighlights, firstPageOffset, b
                         const scroll = (e.target as HTMLDivElement).scrollTop;
                         queuedScrollYRef.current = null;
                         pm.setY(scroll);
+                        if (!paramsCleared) {
+                            setParamsCleared(true);
+                            clearSearchParams();
+                        }
                     }}
                     className="grid justify-center w-screen overflow-auto"
                 >

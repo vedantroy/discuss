@@ -56,9 +56,9 @@ export const userFromId = (userId: ShortUserID) =>
         filter: e.op(user.shortId, "=", userId),
     }));
 
-export function runQuery(q: Expression<any>, { log }: { log: boolean } = { log: false }): void {
+export function runQuery(q: Expression<any>, { log }: { log: boolean } = { log: false }): Promise<void> {
     if (log) {
         console.log(q.toEdgeQL());
     }
-    q.run(db);
+    return q.run(db);
 }
