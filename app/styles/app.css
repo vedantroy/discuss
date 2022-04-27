@@ -2577,6 +2577,10 @@ html {
   z-index: 20;
 }
 
+.z-40 {
+  z-index: 40;
+}
+
 .m-\[1px\] {
   margin: 1px;
 }
@@ -2855,6 +2859,14 @@ html {
 
 .overflow-visible {
   overflow: visible;
+}
+
+.overflow-x-hidden {
+  overflow-x: hidden;
+}
+
+.overflow-x-scroll {
+  overflow-x: scroll;
 }
 
 .break-words {
