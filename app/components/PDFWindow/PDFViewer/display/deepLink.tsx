@@ -1,48 +1,40 @@
+import { PostHighlight } from "../../types";
 import { SelectionContext } from "./selection";
+import { MouseUpContext } from "./ViewerInternal";
 
-type DeepLinkParams = Record<"aId" | "fId" | "aOff" | "bOff", string>;
+type DeepLinkParams = Record<"aId" | "fId" | "aOff" | "fOff" | "page" | "pageOffset", string>;
 
-export function getDeepLinkParams(ctx: SelectionContext): DeepLinkParams {
+export function getDeepLinkParams(ctx: MouseUpContext, pageOffset: number): DeepLinkParams {
+    const { page, anchorNode: { id: aId }, focusNode: { id: fId }, anchorOffset: aOff, focusOffset: fOff } = ctx;
     return {
-        aId: ctx.anchorNode.id,
-        fId: ctx.focusNode.id,
-        aOff: ctx.anchorOffset.toString(),
-        bOff: ctx.focusOffset.toString(),
+        page: page.toString(),
+        aId,
+        fId,
+        aOff: aOff.toString(),
+        fOff: fOff.toString(),
+        pageOffset: pageOffset.toString(),
     };
 }
 
-export type Comment = {
-    anchorId: number;
-    focusId: number;
-    anchorOffset: number;
-    focusOffset: number;
-};
+export const DEEPLINK_HIGHLIGHT_ID = "deeplink_highlight";
+export function getDeepLinkHighlight(params: URLSearchParams): null | PostHighlight {
+    const aId = params.get("aId");
+    const fId = params.get("fId");
+    const aOff = params.get("aOff");
+    const fOff = params.get("fOff");
+    const page = params.get("page");
 
-export function stringifyComments(comments: Comment[]): string {
-    let out = "";
-    for (const c of comments) {
-        out += `${c.anchorId}${c.focusId}${c.anchorOffset}${c.focusOffset}`;
+    if (!(aId && fId && aOff && fOff && page)) {
+        return null;
     }
-    return out;
-}
 
-// don't support cross-page highlights, it allows us to keep comments
-// rendering tech to a single page (we could do it, we'd just need prop-drilling /
-// a state library like redux or zustand)
-
-// https://makandracards.com/makandra/15879-javascript-how-to-generate-a-regular-expression-from-a-string
-function escape(s: string) {
-    return s.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
-}
-
-export function makeSelectionRegex(comments: Comment[], page: number): null | RegExp {
-    if (comments.length === 0) return null;
-    const ids = new Set(comments.flatMap(c => [c.anchorId, c.focusId]));
-
-    // TODO (landmine): This regexp *requires* the existence of (top/left/transform) properties or it WILL be buggy
-    // We need to double-escape every character
-    const regexp = `<span id="${page}-([${
-        Array.from(ids).join("|")
-    }])".*?left:\\s(.*?)px.*?top:\\s(.*?)px.+?.*?transform:\\sscaleX\\((.*?)\\)`;
-    return new RegExp(regexp, "g");
+    return {
+        focusOffset: parseInt(fOff),
+        anchorOffset: parseInt(aOff),
+        page: parseInt(page),
+        anchorId: aId,
+        focusId: fId,
+        id: DEEPLINK_HIGHLIGHT_ID,
+        title: "IF_YOU_SEE_THIS_FILE_A_BUG_REPORT",
+    };
 }

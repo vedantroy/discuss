@@ -244,7 +244,7 @@ export default function() {
                     <div className="divider w-full h-0 my-0 mt-2 mb-6"></div>
                     <PostFrame id={id} vote={vote} score={score}>
                         <PreviewViewer
-                            clickUrl={`/d/pdf/${docShortId}?page=${page}&pageOffset=${excerptRect.y}`}
+                            clickUrl={`/d/pdf/${docShortId}?page=${page}&pageOffset=${excerptRect.y}&hid=${shortId}`}
                             className="w-full"
                             pageRects={{ rects, outline: excerptRect }}
                             page={page}

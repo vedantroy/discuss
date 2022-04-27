@@ -33,7 +33,7 @@ export type Question = {
     createdAt: string;
     answers: Array<Answer>;
     user: UserPreview;
-    document: Pick<PDF, "shortId" | "url" | "baseHeight"> & { club: ClubPreview };
+    document: Pick<PDF, "shortId" | "url"> & { club: ClubPreview };
 };
 export type QuestionStatus = ClubResource<Question>;
 
@@ -72,6 +72,7 @@ export async function getPDFQuestion(id: ShortQuestionID, userId?: ShortUserID):
                     votes: {
                         limit: 1,
                         filter: e.op(post.answers.votes.user.shortId, "=", userId),
+                        up: true,
                     },
                 }
                 : {}),
@@ -119,8 +120,12 @@ export async function getPDFQuestion(id: ShortQuestionID, userId?: ShortUserID):
             ...rest,
             createdAt: r.createdAt.toISOString(),
             shortId: r.shortId as ShortQuestionID,
-            answers: r.answers.map(({ createdAt, ...rest }) => ({ createdAt: createdAt.toISOString(), ...rest })),
-            vote: r.votes[0],
+            answers: r.answers.map(({ createdAt, votes, ...rest }) => ({
+                createdAt: createdAt.toISOString(),
+                vote: (votes || [])[0],
+                ...rest,
+            })),
+            vote: (r.votes || [])[0],
         },
     };
 }

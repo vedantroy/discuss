@@ -2,12 +2,11 @@ import { Rect } from "../../types";
 
 type HighlightProps = {
     rects: Rect[];
-    id: string;
     active: boolean;
     cursor?: boolean;
 };
 
-const highlight: React.FC<HighlightProps> = ({ rects, active, cursor }) => {
+const highlight: React.FC<HighlightProps> = ({ rects, active }) => {
     return (
         <>
             {rects.map(({ x, y, width, height }, i) => (

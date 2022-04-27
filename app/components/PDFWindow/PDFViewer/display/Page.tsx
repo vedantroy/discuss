@@ -6,14 +6,14 @@ import type { PDFPageProxy } from "pdfjs-dist";
 import { RenderingCancelledException, renderTextLayer } from "pdfjs-dist";
 import { RenderParameters, RenderTask, TextContent } from "pdfjs-dist/types/src/display/api";
 import { PageViewport } from "pdfjs-dist/types/web/interfaces";
-import React, { memo, useLayoutEffect, useMemo } from "react";
+import React from "react";
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import invariant from "tiny-invariant";
 import { getPageTextId, toId } from "~/api-transforms/spanId";
 import Flatbush from "~/vendor/flatbush";
 import { PostHighlight, Rect } from "../../types";
-import { Comment, makeSelectionRegex, stringifyComments } from "./deepLink";
+import { DEEPLINK_HIGHLIGHT_ID } from "./deepLink";
 import HighlightArea from "./Highlight";
 import gif from "./loading-icon.gif";
 import { makeRects } from "./selection";
@@ -46,6 +46,7 @@ type PageProps = {
     style?: CSSProperties;
     outstandingRender: number | null;
     highlights: PostHighlight[];
+    linkedHighlightIds: Set<string>;
     onActiveHighlights: (ids: Set<string>) => void;
 };
 
@@ -120,6 +121,7 @@ function Page(
         style = {},
         highlights,
         onActiveHighlights,
+        linkedHighlightIds,
     }: PageProps,
 ) {
     const [textInfo, setTextInfo] = useState<{ html: string } | null>(null);
@@ -163,10 +165,6 @@ function Page(
         const spans = Array.from(pageTextContainer.querySelectorAll<HTMLSpanElement>(Array.from(ids).join(", ")));
         const idToSpan = _.fromPairs(spans.map(span => [span.id, span]));
 
-        console.log("HIGHLIGHTS");
-        console.log(highlights);
-        console.log(spans);
-
         let allRects: HighlightState["rects"] = [];
         const idToRects: HighlightState["idToRects"] = {};
         for (const { anchorId, focusId, anchorOffset, focusOffset, id } of highlights) {
@@ -175,9 +173,6 @@ function Page(
 
             invariant(start, `${pageNum}: no element with id: ${anchorId}`);
             invariant(end, `${pageNum}: no element with id: ${focusId}`);
-
-            console.log("START", "END");
-            console.log(start, end);
 
             const rects = makeRects(start, end, { x, y, anchorOffset, focusOffset });
             idToRects[id] = rects;
@@ -363,7 +358,11 @@ function Page(
                     const { clientX: mx, clientY: my } = e;
                     const [rx, ry] = [mx - x, my - y];
                     const rect_idxs = flatbush.search(rx, ry, rx, ry);
-                    const newActiveIds = new Set(rect_idxs.map(idx => rects[idx].id));
+                    const newActiveIds = new Set(
+                        rect_idxs
+                            .map(idx => rects[idx].id)
+                            .filter(id => id !== DEEPLINK_HIGHLIGHT_ID),
+                    );
                     if (!_.isEqual(activeHighlights, newActiveIds)) {
                         onActiveHighlights(newActiveIds);
                         setActiveHighlights(newActiveIds);
@@ -389,7 +388,13 @@ function Page(
                     && (
                         <div className="inset-0 absolute w-0 h-0">
                             {_.toPairs(highlightState.idToRects).map(([id, rects]) => (
-                                <HighlightArea key={id} active={activeHighlights.has(id)} rects={rects} id={id} />
+                                <HighlightArea
+                                    key={id}
+                                    active={activeHighlights.has(id)
+                                        || id === DEEPLINK_HIGHLIGHT_ID
+                                        || linkedHighlightIds.has(id)}
+                                    rects={rects}
+                                />
                             ))}
                         </div>
                     )}

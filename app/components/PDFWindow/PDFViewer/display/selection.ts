@@ -2,6 +2,15 @@ import { PageViewport } from "pdfjs-dist";
 import invariant from "tiny-invariant";
 import { Rect } from "../../types";
 
+export type SelectionContext = {
+    text: string;
+    selectedChildren: HTMLSpanElement[];
+    anchorNode: HTMLElement;
+    focusNode: HTMLElement;
+    anchorOffset: number;
+    focusOffset: number;
+};
+
 export function makeRects(
     start: HTMLSpanElement,
     end: HTMLSpanElement,
@@ -60,15 +69,6 @@ export function makeRects(
     }
     return rects;
 }
-
-export type SelectionContext = {
-    text: string;
-    selectedChildren: HTMLSpanElement[];
-    anchorNode: HTMLElement;
-    focusNode: HTMLElement;
-    anchorOffset: number;
-    focusOffset: number;
-};
 
 export function processSelection(s: Selection | null): null | SelectionContext {
     if (s === null) return null;

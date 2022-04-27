@@ -27,15 +27,14 @@ const NAV_KEYS = new Set(["ArrowLeft", "ArrowRight", "Delete", "Backspace"]);
 const V_GAP = 10;
 
 export type MouseUpContext = SelectionContext & {
+    pageTextContainer: HTMLElement;
     scale: number;
     rects: Rect[];
     page: number;
     text: string;
 
-    anchorIdx: number;
-    anchorOffset: number;
     focusIdx: number;
-    focusOffset: number;
+    anchorIdx: number;
 };
 
 type ViewerProps = {
@@ -46,14 +45,15 @@ type ViewerProps = {
     // firstPage: number;
     width: number;
     height: number;
+    linkedHighlightIds: Set<string>;
     highlights: PostHighlight[];
+    deepLinkHighlight?: PostHighlight | null;
     pageToHighlights: Record<number, PostHighlight[]>;
-
     baseWidth: number;
     baseHeight: number;
 
     onSelection: (ctx: MouseUpContext | null) => void;
-    clearSearchParams: () => void;
+    // clearSearchParams: () => void;
 };
 
 const StartupState = {
@@ -68,15 +68,23 @@ function isNum(x: unknown): x is number {
 }
 
 function Viewer(
-    { doc, height, onSelection, pageToHighlights, firstPageOffset, baseHeight, firstPage, clearSearchParams }:
-        ViewerProps,
+    {
+        doc,
+        height,
+        onSelection,
+        pageToHighlights,
+        firstPageOffset,
+        baseHeight,
+        firstPage,
+        linkedHighlightIds, /* clearSearchParams */
+        deepLinkHighlight,
+    }: ViewerProps,
 ) {
     const forceUpdate: () => void = useState()[1].bind(null, {} as any);
 
     const [activeHighlights, setActiveHighlights] = useState<Set<string>>(new Set());
 
-    // TODO: Get this call out of here & into the parent
-    const [paramsCleared, setParamsCleared] = useState(false);
+    // const [paramsCleared, setParamsCleared] = useState(false);
     const [allPagesLoaded, setAllPagesLoaded] = useState(false);
     const [startupState, setStartupState] = useState<StartupState>(StartupState.NO_PAGE_MANAGER);
     const [pageStates, setPageStates] = useState<RenderState[]>(fill(new Array(doc.numPages), RenderState.NONE));
@@ -198,17 +206,22 @@ function Viewer(
             // Pages are only displayed if the page manager exists ...
             if (!pm) return [];
 
-            console.log("RENDERING PAGES: " + pageStates.length);
-
             return pageStates.map((state, idx) => {
                 const style = {
                     marginTop: V_GAP,
                     ...(idx === pageStates.length - 1 && { marginBottom: V_GAP }),
                 };
+                const pageNum = idx + 1;
+                const highlights = pageToHighlights[pageNum] || [];
+                if (deepLinkHighlight && deepLinkHighlight.page === pageNum) {
+                    highlights.push(deepLinkHighlight);
+                }
                 return (
                     <Page
                         onActiveHighlights={highlights => setActiveHighlights(highlights)}
-                        highlights={pageToHighlights[idx + 1] || []}
+                        highlights={highlights}
+                        linkedHighlightIds={linkedHighlightIds}
+                        // TODO: Should we add this to the useMemo?
                         style={style}
                         key={idx}
                         viewport={viewport!!}
@@ -238,8 +251,6 @@ function Viewer(
         pm!!.goToPage(clamp(i, 1, doc.numPages));
     }, [pageInputRef?.current, pm, doc.numPages]);
 
-    // const scrollWidth = window.innerWidth - document.body.clientWidth;
-
     const onMouseUp = useCallback(() => {
         const ctx = processSelection(document.getSelection());
         if (ctx) {
@@ -261,6 +272,7 @@ function Viewer(
                 focusOffset,
                 anchorIdx,
                 focusIdx,
+                pageTextContainer,
             });
         } else onSelection(null);
     }, [viewport]);
@@ -319,17 +331,23 @@ function Viewer(
                         const scroll = (e.target as HTMLDivElement).scrollTop;
                         queuedScrollYRef.current = null;
                         pm.setY(scroll);
-                        if (!paramsCleared) {
-                            setParamsCleared(true);
-                            clearSearchParams();
-                        }
+
+                        // TODO: probably best not to clear params
+                        // if (!paramsCleared) {
+                        //     setParamsCleared(true);
+                        //     clearSearchParams();
+                        // }
                     }}
                     className="grid justify-center w-screen overflow-auto"
                 >
                     {Pages}
                 </div>
                 {/* TODO: Prevent this from going on top of the scrollbar*/}
-                <Footer pageToHighlights={pageToHighlights} activeHighlights={activeHighlights} />
+                <Footer
+                    linkedHighlights={linkedHighlightIds}
+                    pageToHighlights={pageToHighlights}
+                    activeHighlights={activeHighlights}
+                />
             </div>
         )
         : <div>Loading..</div>;

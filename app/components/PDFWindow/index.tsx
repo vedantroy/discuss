@@ -7,7 +7,8 @@ import toast, { Toaster } from "react-hot-toast";
 import { useSearchParams } from "remix";
 import invariant from "tiny-invariant";
 import { toURLSearchParams } from "~/api-transforms/submitContext";
-import { getDeepLinkParams } from "./PDFViewer/display/deepLink";
+import { getDeepLinkHighlight, getDeepLinkParams } from "./PDFViewer/display/deepLink";
+import { makeRects } from "./PDFViewer/display/selection";
 import Viewer, { MouseUpContext } from "./PDFViewer/display/ViewerInternal";
 import { PostHighlight } from "./types";
 import useWindowDimensions from "./useWindowDimensions";
@@ -41,14 +42,16 @@ export default function({ url: docSource, highlights, docId, width: pdfWidth, he
     const { width, height } = useWindowDimensions();
 
     const [params, setSearchParams] = useSearchParams();
+    const linkedHighlightIds = new Set<string>(params.getAll("hid"));
     const firstPage = getNumParam(params, "page", 1);
     const pageOffset = getNumParam(params, "pageOffset", 0);
-    const removeParams = () => {
-        const newParams = { ...Object.fromEntries(params) };
-        delete newParams.page;
-        delete newParams.pageOffset;
-        setSearchParams(newParams);
-    };
+
+    // const removeParams = () => {
+    //    const newParams = { ...Object.fromEntries(params) };
+    //    delete newParams.page;
+    //    delete newParams.pageOffset;
+    //    setSearchParams(newParams);
+    // };
 
     useEffect(() => {
         async function go() {
@@ -78,7 +81,12 @@ export default function({ url: docSource, highlights, docId, width: pdfWidth, he
                 invariant(ctx, `invalid selection context`);
 
                 if (isLink) {
-                    const params = new URLSearchParams(getDeepLinkParams(ctx));
+                    const { anchorOffset, focusOffset, pageTextContainer } = ctx;
+                    const { x, y } = pageTextContainer.getBoundingClientRect();
+                    const rects = makeRects(ctx.anchorNode, ctx.focusNode, { anchorOffset, focusOffset, x, y });
+                    const deeplinkOffset = Math.floor(Math.min(...rects.map(r => r.y)));
+
+                    const params = new URLSearchParams(getDeepLinkParams(ctx, deeplinkOffset));
                     const url = `${location.protocol}//${location.host}${location.pathname}`;
                     const urlWithParams = `${url}?${params.toString()}`;
                     if (copy(urlWithParams)) {
@@ -134,6 +142,8 @@ export default function({ url: docSource, highlights, docId, width: pdfWidth, he
     if (!loaded) return <div>loading...</div>;
 
     const pageToHighlights = _.groupBy(highlights, h => h.page);
+    const deepLinkHighlight = getDeepLinkHighlight(params);
+    console.log(deepLinkHighlight);
 
     return (
         <div>
@@ -141,13 +151,15 @@ export default function({ url: docSource, highlights, docId, width: pdfWidth, he
             <Viewer
                 baseWidth={pdfWidth}
                 baseHeight={pdfHeight}
-                clearSearchParams={removeParams}
+                // clearSearchParams={removeParams}
                 firstPage={firstPage}
                 firstPageOffset={pageOffset}
                 pageToHighlights={pageToHighlights}
                 highlights={highlights}
+                deepLinkHighlight={deepLinkHighlight}
                 width={width}
                 height={height}
+                linkedHighlightIds={linkedHighlightIds}
                 doc={docRef.current!!}
                 onSelection={(ctx: MouseUpContext | null) => {
                     selectionContextRef.current = ctx;

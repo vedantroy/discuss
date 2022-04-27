@@ -33,16 +33,19 @@ type PageProps = {
     page: number;
     highlights: PostHighlight[];
     activeHighlights: Set<string>;
+    linkedHighlights: Set<string>;
 };
 
-const Page = ({ page, highlights, activeHighlights }: PageProps) => {
+const Page = ({ page, highlights, activeHighlights, linkedHighlights }: PageProps) => {
     const ordered = highlights.sort((a, b) => fromId(a.anchorId)[1] - fromId(b.anchorId)[1]);
 
     return (
         <>
             <div className="divider divider-horizontal my-3 text-zinc-800">{page}</div>
             <div className="flex flex-row gap-4">
-                {ordered.map(({ text, id }) => <Card active={activeHighlights.has(id)} text={text} />)}
+                {ordered.map(({ text, id }) => (
+                    <Card active={activeHighlights.has(id) || linkedHighlights.has(id)} text={text} />
+                ))}
             </div>
         </>
     );
@@ -50,10 +53,11 @@ const Page = ({ page, highlights, activeHighlights }: PageProps) => {
 
 type FooterProps = {
     activeHighlights: Set<string>;
+    linkedHighlights: Set<string>;
     pageToHighlights: Record<number, PostHighlight[]>;
 };
 
-export default function({ activeHighlights, pageToHighlights }: FooterProps) {
+export default function({ activeHighlights, pageToHighlights, linkedHighlights }: FooterProps) {
     const pages = _(pageToHighlights)
         .keys()
         // R.C bug :) -- (parseInt takes 2 params)
@@ -64,7 +68,13 @@ export default function({ activeHighlights, pageToHighlights }: FooterProps) {
     return (
         <div className="flex flex-row items-center absolute bottom-0 left-0 right-0 h-32 shadow shadow-zinc-500 bg-zinc-100 z-30">
             {pages.map(page => (
-                <Page activeHighlights={activeHighlights} key={page} page={page} highlights={pageToHighlights[page]} />
+                <Page
+                    linkedHighlights={linkedHighlights}
+                    activeHighlights={activeHighlights}
+                    key={page}
+                    page={page}
+                    highlights={pageToHighlights[page]}
+                />
             ))}
         </div>
     );
