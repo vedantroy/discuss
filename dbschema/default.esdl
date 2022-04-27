@@ -63,7 +63,7 @@ module default {
 		required property displayName -> str;
 		required property email -> str;
 	}
-	
+
 	abstract type Post {
 		multi link votes := .<post[is PostVote];
 		multi link answers := .<post[is Answer];
@@ -76,6 +76,18 @@ module default {
 		required property content -> str;
 		# Cached value of the post's score (instead of querying votes everytime)
 		required property score -> int16;
+
+
+		# TODO: Solve repetition ...
+		required property score := (
+			select sum(1 if .<post[is PostVote].up else -1)
+		)
+		# required property upVotes := (
+		# 	select count(.<post[is PostVote].up = true)
+		# );
+		# required property downVotes := (
+		# 	select count(.<post[is PostVote].up = false)
+		# );
 	}
 
 	type PDFPost extending Post {
@@ -110,8 +122,17 @@ module default {
 
 		required link user -> User;
 		required link post -> Post;
-		# cached
-		required property score -> int16;
+
+		# Ideally we could do 1 query instead of 2 computed props
+		required property score := (
+			select sum(1 if .<answer[is AnswerVote].up else -1)
+		)
+		# required property upVotes := (
+		# 	select count(.<answer[is AnswerVote].up = true)
+		# );
+		# required property downVotes := (
+		# 	select count(.<answer[is AnswerVote].up = false)
+		# );
 	}
 
 	abstract type Vote {
@@ -122,9 +143,11 @@ module default {
 
 	type PostVote extending Vote {
 		required link post -> Post;
+		constraint exclusive on ( (.post, .user) );
 	}
 
 	type AnswerVote extending Vote {
 		required link answer -> Answer;
+		constraint exclusive on ( (.answer, .user) );
 	}
 }
