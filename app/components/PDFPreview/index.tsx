@@ -1,4 +1,4 @@
-import { PDFPageProxy } from "pdfjs-dist/types/src/display/api";
+import type { PDFPageProxy } from "pdfjs-dist/types/src/display/api";
 import { useEffect, useRef, useState } from "react";
 import invariant from "tiny-invariant";
 import { Link } from "~/mod";
