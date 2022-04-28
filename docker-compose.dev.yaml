@@ -6,13 +6,9 @@ services:
       EDGEDB_SERVER_SECURITY: insecure_dev_mode
     volumes:
       - "./dbschema:/dbschema"
-      - "./.data:/var/lib/edgedb/data"
+      - "edgedb:/var/lib/edgedb/data"
     ports:
       - "127.0.0.1:5656:5656"
-  #redis:
-  #  image: redis:6.2-alpine
-  #  ports:
-  #    - "6379:6379"
-  #  environment:
-  #    - ALLOW_EMPTY_PASSWORD=yes
-  #  command: redis-server --save "" --appendonly no
+volumes:
+    edgedb:
+        external: false

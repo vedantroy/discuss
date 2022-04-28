@@ -1,7 +1,7 @@
 import { PDFPageProxy } from "pdfjs-dist/types/src/display/api";
 import { useEffect, useRef, useState } from "react";
-import { Link } from "remix";
 import invariant from "tiny-invariant";
+import { Link } from "~/mod";
 import Highlight from "../PDFWindow/PDFViewer/display/Highlight";
 import { Rect } from "../PDFWindow/types";
 import useContainerDimensions from "./useContainerDimensions";

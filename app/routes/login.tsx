@@ -1,9 +1,8 @@
 // Auth is a little complicated & spans multiple files
 // The overview is in auth.server.ts
-import { Form, LoaderFunction, redirect } from "remix";
-import { json, useLoaderData } from "remix";
 import { SocialsProvider } from "remix-auth-socials";
 import invariant from "tiny-invariant";
+import { Form, json, LoaderFunction, redirect, useLoaderData } from "~/mod";
 import { getSession, setSessionHeader } from "~/route-utils/session";
 import { authenticator, SESSION_REDIRECT_KEY, sessionStorage } from "~/server/auth.server";
 
