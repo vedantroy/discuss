@@ -1,6 +1,6 @@
 import _ from "lodash";
 import { useState } from "react";
-import { Link } from "remix";
+import { Link } from "~/mod";
 import { fromId } from "~/api-transforms/spanId";
 import { PostHighlight } from "../../types";
 

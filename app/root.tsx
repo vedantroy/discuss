@@ -1,4 +1,4 @@
-import { Links, LiveReload, Meta, Outlet, Scripts, ScrollRestoration, useLoaderData } from "remix";
+import { Links, LiveReload, Meta, Outlet, Scripts, ScrollRestoration } from "~/mod";
 // import type { MetaFunction } from "remix";
 import type { MetaFunction } from "@remix-run/cloudflare";
 import styles from "./styles/app.css";

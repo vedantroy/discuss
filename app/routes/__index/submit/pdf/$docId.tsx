@@ -1,6 +1,6 @@
 import { withYup } from "@remix-validated-form/with-yup";
 import { useEffect, useState } from "react";
-import { ActionFunction, redirect } from "remix";
+import { ActionFunction, redirect } from "~/mod";
 import { ValidatedForm, validationError } from "remix-validated-form";
 import * as yup from "yup";
 import { fromURLSearchParams, SubmitContext, SubmitContextSerialized } from "~/api-transforms/submitContext";

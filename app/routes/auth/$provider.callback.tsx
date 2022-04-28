@@ -2,7 +2,7 @@
 import { withYup } from "@remix-validated-form/with-yup";
 import { updateSvg } from "jdenticon";
 import { useEffect, useState } from "react";
-import { ActionFunction, json, LoaderFunction, redirect, useLoaderData } from "remix";
+import { ActionFunction, json, LoaderFunction, redirect, useLoaderData } from "~/mod";
 import { SocialsProvider } from "remix-auth-socials";
 import { ValidatedForm, validationError } from "remix-validated-form";
 import invariant from "tiny-invariant";

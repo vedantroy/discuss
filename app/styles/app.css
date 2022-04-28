@@ -1,5 +1,5 @@
 /*
-! tailwindcss v3.0.23 | MIT License | https://tailwindcss.com
+! tailwindcss v3.0.24 | MIT License | https://tailwindcss.com
 */
 
 /*
@@ -890,7 +890,7 @@ html {
   --b3: 0 0% 10%;
   --bc: 0 0% 83%;
   --sc: 271 100% 88%;
-  --ac: 91 100% 87%;
+  --ac: 91 100% 7%;
   --nc: 180 5% 82%;
   --inc: 221 100% 91%;
   --suc: 142 100% 87%;
@@ -967,7 +967,7 @@ html {
   --wa: 43 96% 56%;
   --er: 0 91% 71%;
   --bc: 0 12% 82%;
-  --pc: 141 100% 88%;
+  --pc: 141 100% 8%;
   --sc: 141 100% 10%;
   --ac: 35 100% 10%;
   --nc: 0 7% 81%;
@@ -1000,7 +1000,7 @@ html {
   --b2: 219 53% 39%;
   --b3: 219 53% 35%;
   --bc: 219 100% 89%;
-  --sc: 274 100% 11%;
+  --sc: 274 100% 91%;
   --ac: 47 100% 16%;
   --nc: 205 100% 90%;
   --inc: 221 100% 91%;
@@ -1266,7 +1266,7 @@ html {
   --inc: 191 100% 15%;
   --suc: 135 100% 13%;
   --wac: 65 100% 15%;
-  --erc: 0 100% 13%;
+  --erc: 0 100% 93%;
   --rounded-box: 1rem;
   --rounded-btn: 0.5rem;
   --rounded-badge: 1.9rem;
@@ -1339,7 +1339,7 @@ html {
   --ac: 27 100% 13%;
   --nc: 22 100% 89%;
   --inc: 187 100% 10%;
-  --suc: 165 100% 89%;
+  --suc: 165 100% 9%;
   --wac: 30 100% 10%;
   --erc: 354 100% 90%;
   --rounded-box: 1rem;
@@ -1485,7 +1485,7 @@ html {
   --sc: 234 100% 15%;
   --ac: 329 100% 14%;
   --nc: 217 76% 83%;
-  --inc: 198 100% 90%;
+  --inc: 198 100% 10%;
   --suc: 172 100% 10%;
   --wac: 41 100% 13%;
   --erc: 351 100% 14%;
@@ -1699,6 +1699,8 @@ html {
   font-weight: 600;
   text-transform: uppercase;
   text-transform: var(--btn-text-case, uppercase);
+  -webkit-text-decoration-line: none;
+  text-decoration-line: none;
   border-width: var(--border-btn, 1px);
   -webkit-animation: button-pop var(--animation-btn, 0.25s) ease-out;
           animation: button-pop var(--animation-btn, 0.25s) ease-out;
@@ -1911,17 +1913,6 @@ html {
   cursor: pointer;
   -webkit-text-decoration-line: underline;
   text-decoration-line: underline;
-}
-
-.menu :where(li:not(.disabled):not(.menu-title)) > :where(*:not(ul)) {
-  cursor: pointer;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-   -ms-user-select: none;
-       user-select: none;
-  align-items: center;
-  outline: 2px solid transparent;
-  outline-offset: 2px;
 }
 
 .menu > :where(li.disabled > *:not(ul):focus) {
@@ -2237,6 +2228,10 @@ html {
   color: hsl(var(--bc) / var(--tw-text-opacity));
 }
 
+.input[list]::-webkit-calendar-picker-indicator {
+  line-height: 1em;
+}
+
 .input:focus {
   outline: 2px solid hsla(var(--bc) / 0.2);
   outline-offset: 2px;
@@ -2294,16 +2289,6 @@ html {
 
 .menu li.disabled > *:hover {
   background-color: transparent;
-}
-
-.menu :where(li:not(.disabled)) > :where(*:not(ul)) {
-  outline: 2px solid transparent;
-  outline-offset: 2px;
-  transition-property: color, background-color, border-color, fill, stroke, opacity, box-shadow, transform, filter, -webkit-text-decoration-color, -webkit-backdrop-filter;
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter, -webkit-text-decoration-color, -webkit-backdrop-filter;
-  transition-duration: 200ms;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .mockup-phone .display {

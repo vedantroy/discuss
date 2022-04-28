@@ -1,4 +1,4 @@
-import { json, LoaderFunction, useLoaderData, useParams } from "remix";
+import { json, LoaderFunction, useLoaderData, useParams } from "~/mod";
 import invariant from "tiny-invariant";
 import { toId } from "~/api-transforms/spanId";
 import Viewer from "~/components/PDFWindow";

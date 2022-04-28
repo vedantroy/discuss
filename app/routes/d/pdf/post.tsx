@@ -3,7 +3,7 @@
 // it definitely gets the job done -- but -- (for example) the refresh on sorting posts
 // is jarring as fuck ...
 
-import { ActionFunction, Form, json, LoaderFunction, useLoaderData } from "remix";
+import { ActionFunction, Form, json, LoaderFunction, useLoaderData } from "~/mod";
 import POST_CSS from "~/../styles/post.css";
 import db, { e } from "~/server/edgedb.server";
 import colors from "~/vendor/tailwindcss/colors";

@@ -1,10 +1,9 @@
 import { withYup } from "@remix-validated-form/with-yup";
 import copy from "copy-to-clipboard";
 import { format, formatDistanceToNowStrict, parseISO } from "date-fns";
-import { updateSvg } from "jdenticon";
-import React, { Fragment, useEffect } from "react";
+import React, { Fragment } from "react";
 import toast, { Toaster } from "react-hot-toast";
-import { ActionFunction, Form, json, Link, LoaderFunction, useLoaderData } from "remix";
+import { ActionFunction, json, Link, LoaderFunction, useLoaderData } from "~/mod";
 import { ValidatedForm, validationError } from "remix-validated-form";
 import invariant from "tiny-invariant";
 import * as yup from "yup";

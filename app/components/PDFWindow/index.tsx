@@ -4,7 +4,7 @@ import * as pdfjs from "pdfjs-dist";
 import { PDFDocumentProxy } from "pdfjs-dist";
 import { useCallback, useEffect, useRef, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
-import { useSearchParams } from "remix";
+import { useSearchParams } from "~/mod";
 import invariant from "tiny-invariant";
 import { toURLSearchParams } from "~/api-transforms/submitContext";
 import { getDeepLinkHighlight, getDeepLinkParams } from "./PDFViewer/display/deepLink";

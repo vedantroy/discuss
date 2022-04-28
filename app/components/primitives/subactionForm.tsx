@@ -1,5 +1,5 @@
 import React from "react";
-import { Form, FormProps } from "remix";
+import { Form, FormProps } from "~/mod";
 
 const SubForm = ({ children, subaction, ...rest }: { children: React.ReactNode; subaction: string } & FormProps) => {
     return (

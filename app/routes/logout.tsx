@@ -1,4 +1,4 @@
-import { ActionFunction, LoaderFunction } from "remix";
+import { ActionFunction, LoaderFunction } from "~/mod";
 import { authenticator } from "~/server/auth.server";
 
 export let action: ActionFunction = async ({ request }) => {
