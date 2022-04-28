@@ -13,7 +13,7 @@
     "build:remix": "remix build",
     "build:css": "tailwindcss -m -i ./styles/app.css -o app/styles/app.css",
     "dev": "remix build && run-p dev:*",
-    "dev:wrangler": "cross-env NODE_ENV=development wrangler pages dev ./public",
+    "dev:wrangler": "cross-env NODE_ENV=development wrangler --config ./wrangler.toml pages dev ./public",
     "dev:remix": "remix watch",
     "dev:css": "tailwindcss -w -i ./styles/app.css -o app/styles/app.css",
     "typecheck": "tsc -b"
