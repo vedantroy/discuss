@@ -47,11 +47,7 @@ export const loader: LoaderFunction = async ({ request, params }) => {
     return json<LoaderData>({ error }, { headers: await setSessionHeader(session) });
 };
 
-interface SocialButtonProps {
-    provider: SocialsProvider;
-    label: string;
-}
-
+// Taken from tailwind flowbyte??
 const GoogleButton = ({ children }: { children: React.ReactNode }) => (
     <button
         type="submit"
