@@ -1,7 +1,7 @@
 import _ from "lodash";
 import { useState } from "react";
-import { Link } from "remix";
 import { fromId } from "~/api-transforms/spanId";
+import { Link } from "~/mod";
 import { PostHighlight } from "../../types";
 
 type CardProps = {

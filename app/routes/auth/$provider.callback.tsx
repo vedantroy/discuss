@@ -2,12 +2,12 @@
 import { withYup } from "@remix-validated-form/with-yup";
 import { updateSvg } from "jdenticon";
 import { useEffect, useState } from "react";
-import { ActionFunction, json, LoaderFunction, redirect, useLoaderData } from "remix";
 import { SocialsProvider } from "remix-auth-socials";
 import { ValidatedForm, validationError } from "remix-validated-form";
 import invariant from "tiny-invariant";
 import * as yup from "yup";
 import ValidatedInput from "~/components/primitives/validatedInput";
+import { ActionFunction, json, LoaderFunction, redirect, useLoaderData } from "~/mod";
 import { getParam } from "~/route-utils/params";
 import { getSession, setSessionHeader } from "~/route-utils/session";
 import { authenticator, UserSession } from "~/server/auth.server";

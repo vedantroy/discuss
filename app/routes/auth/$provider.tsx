@@ -1,4 +1,4 @@
-import { ActionFunction, LoaderFunction, redirect } from "remix";
+import { ActionFunction, LoaderFunction, redirect } from "~/mod";
 import { getParam } from "~/route-utils/params";
 import { authenticator } from "~/server/auth.server";
 

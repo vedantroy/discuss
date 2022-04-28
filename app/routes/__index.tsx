@@ -1,6 +1,6 @@
-import { json, Link, LoaderFunction, Outlet, useLoaderData } from "remix";
 import Denticon from "~/components/primitives/denticon";
 import { Col, Row } from "~/components/primitives/layout";
+import { json, Link, LoaderFunction, Outlet, useLoaderData } from "~/mod";
 import { isLoggedIn } from "~/route-utils/session";
 import { authenticator } from "~/server/auth.server";
 import { getUserPreview } from "~/server/queries/__index";

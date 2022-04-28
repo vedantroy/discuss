@@ -1,8 +1,8 @@
-import { json, LoaderFunction, useLoaderData, useParams } from "remix";
 import invariant from "tiny-invariant";
 import { toId } from "~/api-transforms/spanId";
 import Viewer from "~/components/PDFWindow";
 import PDF_CSS from "~/components/PDFWindow/PDFViewer/styles/page.css";
+import { json, LoaderFunction, useLoaderData, useParams } from "~/mod";
 import { getParam } from "~/route-utils/params";
 import { authenticator } from "~/server/auth.server";
 import { DocumentPayload, ObjectStatusCode, ShortDocumentID, ShortUserID } from "~/server/queries/common";

@@ -1,9 +1,12 @@
-import { createCookieSessionStorage } from "remix";
-import { Authenticator, AuthorizationError } from "remix-auth";
-import { OAuth2Profile, OAuth2Strategy, OAuth2StrategyVerifyParams } from "remix-auth-oauth2";
+import { Authenticator } from "remix-auth";
+import { OAuth2StrategyVerifyParams } from "remix-auth-oauth2";
 import { GoogleExtraParams, GoogleProfile, GoogleStrategy, SocialsProvider } from "remix-auth-socials";
+import { createCookieSessionStorage } from "~/mod";
+import getenv from "~/vendor/getenv.ts";
 import { getUserFromGoogleIdentity } from "./queries/auth";
 import { ShortUserID } from "./queries/common";
+
+const COOKIE_SECRET = getenv.string("COOKIE_SECRET");
 
 export const sessionStorage = createCookieSessionStorage({
     cookie: {
@@ -11,19 +14,13 @@ export const sessionStorage = createCookieSessionStorage({
         httpOnly: true,
         path: "/",
         sameSite: "lax",
-        secrets: ["s3cr3t"], // This should be an env variable
+        secrets: [COOKIE_SECRET], // This should be an env variable
         secure: process.env.NODE_ENV === "production",
     },
 });
 
-declare global {
-    namespace NodeJS {
-        interface ProcessEnv {
-            GOOGLE_CLIENT_ID: string;
-            GOOGLE_CLIENT_SECRET: string;
-        }
-    }
-}
+const GOOGLE_CLIENT_ID = getenv.string("GOOGLE_CLIENT_ID");
+const GOOGLE_CLIENT_SECRET = getenv.string("GOOGLE_CLIENT_SECRET");
 
 export const SESSION_REDIRECT_KEY = "auth:redirect";
 
@@ -67,8 +64,8 @@ export type UserSession = {
 export const authenticator = new Authenticator<UserSession>(sessionStorage);
 authenticator.use(
     new GoogleStrategy({
-        clientID: process.env.GOOGLE_CLIENT_ID,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        clientID: GOOGLE_CLIENT_ID,
+        clientSecret: GOOGLE_CLIENT_SECRET,
         callbackURL: `http://localhost:3000/auth/${SocialsProvider.GOOGLE}/callback`,
     }, async (oauth) => {
         const user = await getUserFromGoogleIdentity(oauth.profile._json.sub);
