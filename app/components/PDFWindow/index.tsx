@@ -1,7 +1,7 @@
 import copy from "copy-to-clipboard";
 import _ from "lodash";
-import * as pdfjs from "pdfjs-dist";
-import { PDFDocumentProxy } from "pdfjs-dist";
+import { pdfjs } from "~/mod"
+import type { PDFDocumentProxy } from "pdfjs-dist";
 import { useCallback, useEffect, useRef, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import invariant from "tiny-invariant";
