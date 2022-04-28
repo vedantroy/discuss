@@ -1,5 +1,5 @@
 import { fill, times } from "lodash";
-import { PageViewport } from "pdfjs-dist";
+import type { PageViewport } from "pdfjs-dist";
 import invariant from "tiny-invariant";
 import { makeDoNotCallMe } from "./helpers";
 

@@ -3,9 +3,9 @@
 // TODO: Implement zoom & search ...
 import _ from "lodash";
 import type { PDFPageProxy } from "pdfjs-dist";
-import { RenderingCancelledException, renderTextLayer } from "pdfjs-dist";
-import { RenderParameters, RenderTask, TextContent } from "pdfjs-dist/types/src/display/api";
-import { PageViewport } from "pdfjs-dist/types/web/interfaces";
+import type { RenderParameters, RenderTask, TextContent } from "pdfjs-dist/types/src/display/api";
+import type { PageViewport } from "pdfjs-dist/types/web/interfaces";
+import { pdfjs } from "~/mod"
 import React from "react";
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
@@ -86,7 +86,7 @@ function renderGraphics(
             }
         })
         .catch((e: unknown) => {
-            const isCancel = e instanceof RenderingCancelledException;
+            const isCancel = e instanceof pdfjs.RenderingCancelledException;
             if (!isCancel) {
                 setInternalState(InternalState.ERROR);
                 console.log("ERROR: " + pageNum);
@@ -209,7 +209,7 @@ function Page(
                 textContent.current = await textContentPromise.current.p;
             }
             if (cancel) return;
-            const task = renderTextLayer({
+            const task = pdfjs.renderTextLayer({
                 // @ts-ignore https://github.com/mozilla/pdf.js/issues/14716
                 container: frag,
                 viewport,

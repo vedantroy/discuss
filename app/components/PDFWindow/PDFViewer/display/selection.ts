@@ -1,4 +1,3 @@
-import { PageViewport } from "pdfjs-dist";
 import invariant from "tiny-invariant";
 import { Rect } from "../../types";
 
