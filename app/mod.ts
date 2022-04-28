@@ -9,3 +9,6 @@ import {
 export { createCookieSessionStorage, json, redirect };
 export type { ActionFunction, EntryContext, LoaderFunction };
 export * from "@remix-run/react";
+
+import * as pdfjs from "pdfjs-dist/legacy/build/pdf"
+export { pdfjs }
