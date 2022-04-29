@@ -1,7 +1,7 @@
-import { pdfjs } from "~/mod"
 import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist/types/src/display/api";
 import type { PageViewport } from "pdfjs-dist/types/src/display/display_utils";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { pdfjs } from "~/mod";
 import PageManager, { makeRenderQueues, PageState } from "../controller/PageManager";
 import Footer from "./Footer";
 import Page, { RenderState } from "./Page";

@@ -23,9 +23,7 @@ export default function() {
         <Col className="h-full">
             <Row className="w-full h-10 bg-gray-50 shadow shadow-gray-400 justify-center items-stretch z-50">
                 <Row className="h-full w-full max-w-[1264px] items-center">
-                    <div className="cursor-pointer h-full w-fit hover:bg-gray-200 text-center grid place-items-center px-4">
-                        Collab Books
-                    </div>
+                    <div className="cursor-pointer h-full w-fit hover:bg-gray-200 text-center grid place-items-center px-4">Chimu</div>
                     <div className="ml-auto mr-2">
                         {!user && (
                             <Link to={`/login?redirectTo=${encodeURIComponent(url)}`} className="btn btn-sm">

@@ -13,20 +13,20 @@ declare global {
 const production = process.env.NODE_ENV === "production";
 const EDGEDB_PORT = getenv.int("EDGEDB_PORT");
 
-const config: ConnectConfig = {
-    port: EDGEDB_PORT,
-    tlsSecurity: production ? "default" : "insecure",
-};
-
+console.log(`MODE: ${process.env.NODE_ENV}`);
 if (production) {
     const EDGEDB_PASSWORD = getenv.string("EDGEDB_PASSWORD");
     const EDGEDB_HOST = getenv.string("EDGEDB_HOST");
-    db = edgedb.createClient({
-        port: EDGEDB_PORT,
-        password: EDGEDB_PASSWORD,
-        host: EDGEDB_HOST,
-        tlsSecurity: "insecure",
-    });
+    const config: edgedb.ConnectOptions =  {
+                port: EDGEDB_PORT,
+                password: EDGEDB_PASSWORD,
+                host: EDGEDB_HOST,
+                // yes, this is here on purpose
+                tlsSecurity: "insecure",
+                waitUntilAvailable: 5000,
+    }
+    console.log(`PRODUCTION DB CONFIG: ${JSON.stringify(config, null, 2)}`)
+    db = edgedb.createClient(config);
 } else {
     if (!global.__db) {
         global.__db = edgedb.createClient({ port: EDGEDB_PORT, tlsSecurity: "insecure" });

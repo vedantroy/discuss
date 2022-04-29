@@ -1,6 +1,6 @@
 import type { PDFDocumentProxy } from "pdfjs-dist";
-import { pdfjs } from "~/mod"
 import { useEffect, useRef, useState } from "react";
+import { pdfjs } from "~/mod";
 
 export default function usePDFDoc(url: string): PDFDocumentProxy | null {
     const [loaded, setLoaded] = useState(false);

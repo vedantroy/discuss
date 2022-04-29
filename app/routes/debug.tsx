@@ -8,7 +8,7 @@ type Debug = {
 export let loader: LoaderFunction = ({ request, params }) => {
 	const env = process.env;
 	return json({
-		NODE_ENV: env.NODE_ENV
+		NODE_ENV: env.NODE_ENV,
 	})
 }
 

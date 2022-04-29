@@ -1,1 +1,10 @@
+# These will be re-downloaded in the builder
 node_modules
+# These will re-generated in the builder
+# If you are using the remote builder fly deploy --remote-only
+# This isn't necessary because these directories won't be sent to the remote
+# builder (not sure why - maybe the .gitignore?)
+public/build
+build
+# Not needed
+.cache

@@ -1,4 +1,5 @@
 node_modules
+dbschema/edgeql-js
 
 /.cache
 /build

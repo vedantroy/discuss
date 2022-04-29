@@ -5,12 +5,12 @@ import _ from "lodash";
 import type { PDFPageProxy } from "pdfjs-dist";
 import type { RenderParameters, RenderTask, TextContent } from "pdfjs-dist/types/src/display/api";
 import type { PageViewport } from "pdfjs-dist/types/web/interfaces";
-import { pdfjs } from "~/mod"
 import React from "react";
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import invariant from "tiny-invariant";
 import { getPageTextId, toId } from "~/api-transforms/spanId";
+import { pdfjs } from "~/mod";
 import Flatbush from "~/vendor/flatbush";
 import { PostHighlight, Rect } from "../../types";
 import { DEEPLINK_HIGHLIGHT_ID } from "./deepLink";

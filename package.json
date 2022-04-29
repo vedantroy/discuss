@@ -5,10 +5,12 @@
   "license": "",
   "sideEffects": false,
   "scripts": {
+    "start:env": "dotenv cross-env NODE_ENV=production remix-serve build",
     "start": "cross-env NODE_ENV=production remix-serve build",
     "test": "time jest",
     "test:debug": "ndb jest",
-    "format:watch": "chokidar ./app/**/*.{ts,tsx} package.json -c \"./format.sh\"",
+    "format": "time dprint fmt",
+    "format:watch": "chokidar ./app/**/*.{ts,tsx} package.json -c \"npm run format\"",
     "build": "npm run build:css && remix build",
     "build:css": "tailwindcss -m -i ./styles/app.css -o app/styles/app.css",
     "dev": "concurrently \"npm run dev:css\" \"remix dev\"",
@@ -17,8 +19,8 @@
     "typecheck": "tsc -b"
   },
   "dependencies": {
-    "@remix-run/react": "^1.2.3",
     "@remix-run/node": "^1.4.3",
+    "@remix-run/react": "^1.2.3",
     "@remix-run/serve": "^1.4.3",
     "@remix-validated-form/with-yup": "^2.0.1",
     "copy-to-clipboard": "^3.3.1",
@@ -52,6 +54,9 @@
     "autoprefixer": "^10.4.2",
     "chokidar-cli": "^3.0.0",
     "concurrently": "^7.0.0",
+    "dotenv": "^16.0.0",
+    "dotenv-cli": "^5.1.0",
+    "dprint": "^0.27.0",
     "esbuild-jest": "^0.5.0",
     "eslint": "^8.9.0",
     "jest": "^27.5.1",

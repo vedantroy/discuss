@@ -1,11 +1,11 @@
 import copy from "copy-to-clipboard";
 import _ from "lodash";
-import { pdfjs } from "~/mod"
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { useCallback, useEffect, useRef, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import invariant from "tiny-invariant";
 import { toURLSearchParams } from "~/api-transforms/submitContext";
+import { pdfjs } from "~/mod";
 import { useSearchParams } from "~/mod";
 import { getDeepLinkHighlight, getDeepLinkParams } from "./PDFViewer/display/deepLink";
 import { makeRects } from "./PDFViewer/display/selection";
