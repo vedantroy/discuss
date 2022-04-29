@@ -1,5 +1,6 @@
 #! /usr/bin/env node
 
+// This script hangs & stuff -- idk why
 const child_process = require("child_process");
 require('dotenv').config();
 
@@ -10,6 +11,7 @@ for (const envVar of envVars) {
 	if (!value) {
 		console.error(`Missing environment variable: ${envVar}`);
 	}
+	// the quote is important ...
 	const command = `fly secrets set ${envVar}='${value}'`
 	console.log(`Executing: ${command}`);
 	let out = null
