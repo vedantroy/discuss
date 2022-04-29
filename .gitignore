@@ -7,3 +7,5 @@ dbschema/edgeql-js
 .env
 
 tsconfig.tsbuildinfo
+
+SECRETS.md
