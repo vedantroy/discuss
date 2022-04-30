@@ -1,10 +1,22 @@
 import { PostHighlight } from "../../types";
 import { MouseUpContext } from "./ViewerInternal";
 
-type DeepLinkParams = Record<"aId" | "fId" | "aOff" | "fOff" | "page" | "pageOffset", string>;
+type DeepLinkParams = Record<
+    "aId" | "fId" | "aOff" | "fOff" | "page" | "pageOffset",
+    string
+>;
 
-export function getDeepLinkParams(ctx: MouseUpContext, pageOffset: number): DeepLinkParams {
-    const { page, anchorNode: { id: aId }, focusNode: { id: fId }, anchorOffset: aOff, focusOffset: fOff } = ctx;
+export function getDeepLinkParams(
+    ctx: MouseUpContext,
+    pageOffset: number,
+): DeepLinkParams {
+    const {
+        page,
+        anchorNode: { id: aId },
+        focusNode: { id: fId },
+        anchorOffset: aOff,
+        focusOffset: fOff,
+    } = ctx;
     return {
         page: page.toString(),
         aId,

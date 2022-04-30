@@ -1,7 +1,11 @@
 // This is a test route
 import { LoaderFunction, redirect } from "~/mod";
 import { getSession, setSessionHeader } from "~/route-utils/session";
-import { authenticator, SESSION_REDIRECT_KEY, sessionStorage } from "~/server/auth.server";
+import {
+    authenticator,
+    SESSION_REDIRECT_KEY,
+    sessionStorage,
+} from "~/server/auth.server";
 
 export const loader: LoaderFunction = async ({ request, params }) => {
     const userData = await authenticator.isAuthenticated(request);

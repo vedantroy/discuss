@@ -1,5 +1,6 @@
 {
   "incremental": true,
+  "lineWidth": 85,
   "typescript": {
   },
   "json": {

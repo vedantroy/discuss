@@ -133,7 +133,9 @@ function Page({ pageRects, page, containerWidth }: PageProps) {
     );
 }
 
-export default function PreviewViewer({ url, page, className, pageRects, clickUrl }: PreviewViewProps) {
+export default function PreviewViewer(
+    { url, page, className, pageRects, clickUrl }: PreviewViewProps,
+) {
     const divRef = useRef<HTMLDivElement | null>(null);
     const { width, height } = useContainerDimensions(divRef);
     const doc = usePDFDoc(url);
@@ -155,10 +157,20 @@ export default function PreviewViewer({ url, page, className, pageRects, clickUr
                 ? (clickUrl
                     ? (
                         <Link prefetch="render" target="_blank" to={clickUrl}>
-                            <Page page={pageProxy} containerWidth={width} pageRects={pageRects} />
+                            <Page
+                                page={pageProxy}
+                                containerWidth={width}
+                                pageRects={pageRects}
+                            />
                         </Link>
                     )
-                    : <Page page={pageProxy} containerWidth={width} pageRects={pageRects} />)
+                    : (
+                        <Page
+                            page={pageProxy}
+                            containerWidth={width}
+                            pageRects={pageRects}
+                        />
+                    ))
                 : <div>loading ...</div>}
         </div>
     );

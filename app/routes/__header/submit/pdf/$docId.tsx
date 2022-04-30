@@ -2,7 +2,11 @@ import { withYup } from "@remix-validated-form/with-yup";
 import { useEffect, useState } from "react";
 import { ValidatedForm, validationError } from "remix-validated-form";
 import * as yup from "yup";
-import { fromURLSearchParams, SubmitContext, SubmitContextSerialized } from "~/api-transforms/submitContext";
+import {
+    fromURLSearchParams,
+    SubmitContext,
+    SubmitContextSerialized,
+} from "~/api-transforms/submitContext";
 import PreviewViewer from "~/components/PDFPreview";
 import ValidatedInput from "~/components/primitives/validatedInput";
 import ValidatedTextarea from "~/components/primitives/validatedTextarea";
@@ -66,7 +70,12 @@ export const action: ActionFunction = async ({ request, params }) => {
         content,
         document: docId as ShortDocumentID,
         page: meta.page,
-        excerptRect: { x: meta.left, y: meta.top, width: meta.width, height: meta.height },
+        excerptRect: {
+            x: meta.left,
+            y: meta.top,
+            width: meta.width,
+            height: meta.height,
+        },
         rects: meta.rects,
         excerpt: meta.text,
         focusIdx: meta.focusIdx,
@@ -96,7 +105,7 @@ export default function() {
                 validator={validator}
                 method="post"
                 defaultValues={{}}
-                className="w-full max-w-[1264px] flex-1 mx-auto my-0 flex flex-row p-4 gap-4"
+                className="Container-Width flex-1 my-0 flex flex-row py-4 gap-4"
             >
                 <div className="flex-1 bg-white shadow h-full p-4 font-semibold">
                     <div className="text-lg">Title</div>
@@ -108,7 +117,12 @@ export default function() {
                                 className="w-full"
                                 pageRects={{
                                     rects: ctx.rects,
-                                    outline: { x: ctx.left, y: ctx.top, width: ctx.width, height: ctx.height },
+                                    outline: {
+                                        x: ctx.left,
+                                        y: ctx.top,
+                                        width: ctx.width,
+                                        height: ctx.height,
+                                    },
                                 }}
                                 page={ctx.page}
                                 url={ctx.url}
@@ -121,7 +135,12 @@ export default function() {
                         defaultValue=""
                         className="w-full h-52 mt-1"
                     />
-                    <input name={INPUT_META} type="hidden" value={JSON.stringify(ctx)}></input>
+                    <input
+                        name={INPUT_META}
+                        type="hidden"
+                        value={JSON.stringify(ctx)}
+                    >
+                    </input>
                     <button className="btn btn-primary">Submit</button>
                 </div>
             </ValidatedForm>

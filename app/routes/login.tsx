@@ -4,7 +4,11 @@ import { SocialsProvider } from "remix-auth-socials";
 import invariant from "tiny-invariant";
 import { Form, json, LoaderFunction, redirect, useLoaderData } from "~/mod";
 import { getSession, setSessionHeader } from "~/route-utils/session";
-import { authenticator, SESSION_REDIRECT_KEY, sessionStorage } from "~/server/auth.server";
+import {
+    authenticator,
+    SESSION_REDIRECT_KEY,
+    sessionStorage,
+} from "~/server/auth.server";
 
 type LoaderData = {
     error: { message: string } | null;
@@ -22,7 +26,10 @@ export const loader: LoaderFunction = async ({ request, params }) => {
         // 2. Redirect the user to the page they were trying to access
         const redirectRoute = await session.get(SESSION_REDIRECT_KEY) || redirectTo;
         if (redirectRoute) {
-            invariant(typeof redirectRoute === "string", `invalid redirect: ${redirectRoute}`);
+            invariant(
+                typeof redirectRoute === "string",
+                `invalid redirect: ${redirectRoute}`,
+            );
             // A redirect was set using `session.flash`, so follow it
             // We need to commit the new session (which no longer has the flashed value,
             // since flashes are removed automatically on session.get)
@@ -78,7 +85,11 @@ export default function Screen() {
     return (
         <div className="w-full h-screen flex flex-row items-center justify-center">
             {error && <div>{error.message}</div>}
-            <Form className="mx-auto" action={`/auth/${SocialsProvider.GOOGLE}`} method="post">
+            <Form
+                className="mx-auto"
+                action={`/auth/${SocialsProvider.GOOGLE}`}
+                method="post"
+            >
                 <GoogleButton>Sign in with Google</GoogleButton>
             </Form>
         </div>

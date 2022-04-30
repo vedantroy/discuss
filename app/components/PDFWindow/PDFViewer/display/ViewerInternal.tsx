@@ -1,4 +1,7 @@
-import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist/types/src/display/api";
+import type {
+    PDFDocumentProxy,
+    PDFPageProxy,
+} from "pdfjs-dist/types/src/display/api";
 import type { PageViewport } from "pdfjs-dist/types/src/display/display_utils";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { pdfjs } from "~/mod";
@@ -86,8 +89,12 @@ function Viewer(
 
     // const [paramsCleared, setParamsCleared] = useState(false);
     const [allPagesLoaded, setAllPagesLoaded] = useState(false);
-    const [startupState, setStartupState] = useState<StartupState>(StartupState.NO_PAGE_MANAGER);
-    const [pageStates, setPageStates] = useState<RenderState[]>(fill(new Array(doc.numPages), RenderState.NONE));
+    const [startupState, setStartupState] = useState<StartupState>(
+        StartupState.NO_PAGE_MANAGER,
+    );
+    const [pageStates, setPageStates] = useState<RenderState[]>(
+        fill(new Array(doc.numPages), RenderState.NONE),
+    );
 
     const pageInputRef = useRef<HTMLInputElement>(null);
     const zoomRef = useRef<number>(1.0);
@@ -107,31 +114,40 @@ function Viewer(
     const { current: pm } = pageManagerRef;
     // fake is used for debug purposes
     const validPm = pm || { fake: true } as unknown as PageManager;
-    validPm.onUpdate = useCallback(async ({ x, y, states, page, viewport, outstandingRender }) => {
-        if (!allPagesLoaded && states) {
-            const idxs = states
-                .map((x, i) => x === PageState.RENDER ? i : null)
-                .filter(x => x !== null) as number[];
+    validPm.onUpdate = useCallback(
+        async ({ x, y, states, page, viewport, outstandingRender }) => {
+            if (!allPagesLoaded && states) {
+                const idxs = states
+                    .map((x, i) => x === PageState.RENDER ? i : null)
+                    .filter(x => x !== null) as number[];
 
-            for (const idx of idxs) {
-                // TODO: If we ever hit this, we'll deal w/ it
-                invariant(pages[idx], `still loading page: ${idx + 1}`);
+                for (const idx of idxs) {
+                    // TODO: If we ever hit this, we'll deal w/ it
+                    invariant(pages[idx], `still loading page: ${idx + 1}`);
+                }
             }
-        }
-        if (outstandingRender !== undefined) setOutstandingRender(outstandingRender);
-        if (isNum(page)) {
-            pageInputRef.current!!.value = page.toString();
-        }
+            if (outstandingRender !== undefined) {
+                setOutstandingRender(outstandingRender);
+            }
+            if (isNum(page)) {
+                pageInputRef.current!!.value = page.toString();
+            }
 
-        if (isNum(y)) {
-            queuedScrollYRef.current = y;
-            forceUpdate();
-        }
-        if (viewport) setViewport(viewport);
-        if (Array.isArray(states)) {
-            setPageStates(states.map(x => x === PageState.RENDER_DONE ? RenderState.RENDER : x));
-        }
-    }, [pageStates, allPagesLoaded]);
+            if (isNum(y)) {
+                queuedScrollYRef.current = y;
+                forceUpdate();
+            }
+            if (viewport) setViewport(viewport);
+            if (Array.isArray(states)) {
+                setPageStates(
+                    states.map(x =>
+                        x === PageState.RENDER_DONE ? RenderState.RENDER : x
+                    ),
+                );
+            }
+        },
+        [pageStates, allPagesLoaded],
+    );
 
     // Seems like pageContainerRef changes several times
     // so we can't just one-and-done, set `scrollTop`
@@ -149,7 +165,10 @@ function Viewer(
 
     useEffect(() => {
         const initializePages = async () => {
-            const renderQueues = makeRenderQueues(doc.numPages, PAGE_BUFFER_SIZE - 1);
+            const renderQueues = makeRenderQueues(
+                doc.numPages,
+                PAGE_BUFFER_SIZE - 1,
+            );
 
             const firstRenderQueue = renderQueues[firstPage - 1];
             const firstRenderQueueSet = new Set();
@@ -180,7 +199,9 @@ function Viewer(
             const promises = Object.values(pageToPromise);
             const firstPageLoadedNum = await Promise.race(promises);
             const firstPageLoaded = pages[firstPageLoadedNum - 1];
-            const viewport = firstPageLoaded!!.proxy.getViewport({ scale: zoomRef.current!! });
+            const viewport = firstPageLoaded!!.proxy.getViewport({
+                scale: zoomRef.current!!,
+            });
             setViewport(viewport);
 
             const pm = new PageManager({
@@ -218,7 +239,8 @@ function Viewer(
                 }
                 return (
                     <Page
-                        onActiveHighlights={highlights => setActiveHighlights(highlights)}
+                        onActiveHighlights={highlights =>
+                            setActiveHighlights(highlights)}
                         highlights={highlights}
                         linkedHighlightIds={linkedHighlightIds}
                         // TODO: Should we add this to the useMemo?
@@ -261,7 +283,12 @@ function Viewer(
             const pageTextContainer = document.getElementById(pageTextId);
             invariant(pageTextContainer, `id: ${pageTextId} not found`);
             const { x, y } = pageTextContainer.getBoundingClientRect();
-            const rects = makeRects(anchorNode, focusNode, { x, y, anchorOffset, focusOffset });
+            const rects = makeRects(anchorNode, focusNode, {
+                x,
+                y,
+                anchorOffset,
+                focusOffset,
+            });
             onSelection({
                 ...ctx,
                 rects,

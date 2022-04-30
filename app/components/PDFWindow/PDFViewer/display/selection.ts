@@ -13,7 +13,12 @@ export type SelectionContext = {
 export function makeRects(
     start: HTMLSpanElement,
     end: HTMLSpanElement,
-    { x, y, anchorOffset, focusOffset }: { x: number; y: number; anchorOffset: number; focusOffset: number },
+    { x, y, anchorOffset, focusOffset }: {
+        x: number;
+        y: number;
+        anchorOffset: number;
+        focusOffset: number;
+    },
 ): Rect[] {
     const range = document.createRange();
     range.selectNode(start);

@@ -7,7 +7,10 @@ import invariant from "tiny-invariant";
 import { toURLSearchParams } from "~/api-transforms/submitContext";
 import { pdfjs } from "~/mod";
 import { useSearchParams } from "~/mod";
-import { getDeepLinkHighlight, getDeepLinkParams } from "./PDFViewer/display/deepLink";
+import {
+    getDeepLinkHighlight,
+    getDeepLinkParams,
+} from "./PDFViewer/display/deepLink";
 import { makeRects } from "./PDFViewer/display/selection";
 import Viewer, { MouseUpContext } from "./PDFViewer/display/ViewerInternal";
 import { PostHighlight } from "./types";
@@ -28,7 +31,11 @@ type ToastIds = {
 const HOTKEY_LINK = "l";
 const HOTKEY_POST = "p";
 
-function getNumParam(params: URLSearchParams, key: string, defaultValue: number): number {
+function getNumParam(
+    params: URLSearchParams,
+    key: string,
+    defaultValue: number,
+): number {
     const value = params.get(key);
     if (value === null) {
         return defaultValue;
@@ -36,7 +43,10 @@ function getNumParam(params: URLSearchParams, key: string, defaultValue: number)
     return parseInt(value);
 }
 
-export default function({ url: docSource, highlights, docId, width: pdfWidth, height: pdfHeight }: PDFWindowProps) {
+export default function(
+    { url: docSource, highlights, docId, width: pdfWidth, height: pdfHeight }:
+        PDFWindowProps,
+) {
     const [loaded, setLoaded] = useState(false);
     const docRef = useRef<PDFDocumentProxy | null>(null);
     const { width, height } = useWindowDimensions();
@@ -83,11 +93,21 @@ export default function({ url: docSource, highlights, docId, width: pdfWidth, he
                 if (isLink) {
                     const { anchorOffset, focusOffset, pageTextContainer } = ctx;
                     const { x, y } = pageTextContainer.getBoundingClientRect();
-                    const rects = makeRects(ctx.anchorNode, ctx.focusNode, { anchorOffset, focusOffset, x, y });
-                    const deeplinkOffset = Math.floor(Math.min(...rects.map(r => r.y)));
+                    const rects = makeRects(ctx.anchorNode, ctx.focusNode, {
+                        anchorOffset,
+                        focusOffset,
+                        x,
+                        y,
+                    });
+                    const deeplinkOffset = Math.floor(
+                        Math.min(...rects.map(r => r.y)),
+                    );
 
-                    const params = new URLSearchParams(getDeepLinkParams(ctx, deeplinkOffset));
-                    const url = `${location.protocol}//${location.host}${location.pathname}`;
+                    const params = new URLSearchParams(
+                        getDeepLinkParams(ctx, deeplinkOffset),
+                    );
+                    const url =
+                        `${location.protocol}//${location.host}${location.pathname}`;
                     const urlWithParams = `${url}?${params.toString()}`;
                     if (copy(urlWithParams)) {
                         toast.success(`Link copied to clipboard!`);
@@ -131,7 +151,8 @@ export default function({ url: docSource, highlights, docId, width: pdfWidth, he
                         focusOffset: ctx.focusOffset,
                     }));
 
-                    const url = `${location.protocol}//${location.host}/submit/pdf/${docId}`;
+                    const url =
+                        `${location.protocol}//${location.host}/submit/pdf/${docId}`;
                     const urlWithParams = `${url}?${params.toString()}`;
                     window.open(urlWithParams, "_blank")!!.focus();
                 }
@@ -170,22 +191,25 @@ export default function({ url: docSource, highlights, docId, width: pdfWidth, he
                     }
                     if (selectionRemoved) return;
 
-                    const hotKeyToastId = toast(t => (
-                        <div className="flex bg-white flex-col text-base">
-                            <div className="flex flex-row items-center">
-                                <kbd className="kbd kbd-sm">{HOTKEY_LINK}</kbd>
-                                <div>
-                                    &nbsp;- link
+                    const hotKeyToastId = toast(
+                        t => (
+                            <div className="flex bg-white flex-col text-base">
+                                <div className="flex flex-row items-center">
+                                    <kbd className="kbd kbd-sm">{HOTKEY_LINK}</kbd>
+                                    <div>
+                                        &nbsp;- link
+                                    </div>
+                                </div>
+                                <div className="flex flex-row items-center pt-1">
+                                    <kbd className="kbd kbd-sm">{HOTKEY_POST}</kbd>
+                                    <div>
+                                        &nbsp;- post
+                                    </div>
                                 </div>
                             </div>
-                            <div className="flex flex-row items-center pt-1">
-                                <kbd className="kbd kbd-sm">{HOTKEY_POST}</kbd>
-                                <div>
-                                    &nbsp;- post
-                                </div>
-                            </div>
-                        </div>
-                    ), { duration: Infinity, style: { padding: "0px" } });
+                        ),
+                        { duration: Infinity, style: { padding: "0px" } },
+                    );
                     toastIds.hotkey = hotKeyToastId;
                 }}
             />

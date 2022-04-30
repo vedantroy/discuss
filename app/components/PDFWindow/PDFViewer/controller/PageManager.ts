@@ -71,8 +71,14 @@ function rangeInclusive(a: number, b: number): number[] {
     return arr;
 }
 
-export function makeRenderQueues(pages: number, pageBufferSize: number): ReadonlyArray<ReadonlyArray<number>> {
-    invariant(pageBufferSize % 2 === 0, `extra page buffer size was odd: ${pageBufferSize}`);
+export function makeRenderQueues(
+    pages: number,
+    pageBufferSize: number,
+): ReadonlyArray<ReadonlyArray<number>> {
+    invariant(
+        pageBufferSize % 2 === 0,
+        `extra page buffer size was odd: ${pageBufferSize}`,
+    );
     const queues: number[][] = Array(pages);
     for (let currentPage = 1; currentPage <= pages; ++currentPage) {
         const halfBuf = pageBufferSize / 2;
@@ -89,7 +95,9 @@ export function makeRenderQueues(pages: number, pageBufferSize: number): Readonl
         }
 
         const queue = rangeInclusive(lo, hi);
-        queue.sort((a, b) => getPriority(currentPage, a) - getPriority(currentPage, b));
+        queue.sort((a, b) =>
+            getPriority(currentPage, a) - getPriority(currentPage, b)
+        );
 
         queues[currentPage - 1] = queue;
     }
@@ -98,7 +106,9 @@ export function makeRenderQueues(pages: number, pageBufferSize: number): Readonl
 
 // this was extracted but it turns out i didn't need to cus
 // i'm a bad programmer :(((
-function getPageFromY({ vGap, pageHeight, y }: { vGap: number; pageHeight: number; y: number }): number {
+function getPageFromY(
+    { vGap, pageHeight, y }: { vGap: number; pageHeight: number; y: number },
+): number {
     const pageWithVGap = pageHeight + vGap;
     const pagesOutOfScreen = Math.floor(y / pageWithVGap);
     const remainingPixels = y % pageWithVGap;
@@ -126,7 +136,10 @@ export default class PageManager {
     #update: PartialUpdate | null;
     onUpdate: (u: Update) => void;
 
-    constructor({ renderQueues, pageBufferSize, hGap, vGap, baseViewport, pages }: PageManagerOpts) {
+    constructor(
+        { renderQueues, pageBufferSize, hGap, vGap, baseViewport, pages }:
+            PageManagerOpts,
+    ) {
         invariant(
             pageBufferSize % 2 === 1 && pageBufferSize > 0,
             `page buffer size must be positive & odd, got ${pageBufferSize}`,
@@ -172,7 +185,10 @@ export default class PageManager {
             console.log(this.#currentPage - 1);
             console.log(this.renderQueues.length);
         }
-        while (this.#rendered.has(toRender[this.#renderQueueIdx]) && this.#renderQueueIdx < toRender.length) {
+        while (
+            this.#rendered.has(toRender[this.#renderQueueIdx])
+            && this.#renderQueueIdx < toRender.length
+        ) {
             this.#renderQueueIdx++;
         }
 
@@ -183,7 +199,10 @@ export default class PageManager {
 
         const pageToRender = toRender[this.#renderQueueIdx];
         if (pageToRender === this.#outstandingRender) {
-            return { action: InternalType.BLOCKED_SELF, page: this.#outstandingRender };
+            return {
+                action: InternalType.BLOCKED_SELF,
+                page: this.#outstandingRender,
+            };
         }
         if (this.#states[pageToRender - 1] === PageState.DESTROY) {
             return { action: InternalType.BLOCKED_SELF_DESTROY, page: pageToRender };
@@ -191,7 +210,8 @@ export default class PageManager {
 
         const pageBufferFull = this.#rendered.size === this.#pageBufferSize;
         const pageBufferAlmostFull =
-            (this.#rendered.size === this.#pageBufferSize - 1 && this.#outstandingRender !== null);
+            (this.#rendered.size === this.#pageBufferSize - 1
+                && this.#outstandingRender !== null);
 
         if (pageBufferFull || pageBufferAlmostFull) {
             // Case 2: We can't render b/c there's no space
@@ -268,7 +288,13 @@ export default class PageManager {
     };
 
     #setY(y: number) {
-        return { page: getPageFromY({ vGap: this.#vGap, pageHeight: this.#pageHeight, y }) };
+        return {
+            page: getPageFromY({
+                vGap: this.#vGap,
+                pageHeight: this.#pageHeight,
+                y,
+            }),
+        };
     }
 
     #loop = () => {
@@ -366,7 +392,10 @@ export default class PageManager {
                 this.#y = event.y;
                 newUpdate = { ...newUpdate, page };
             } else {
-                invariant(event.type === EventType.GO_TO_Y, `invalid event: ${event.type}`);
+                invariant(
+                    event.type === EventType.GO_TO_Y,
+                    `invalid event: ${event.type}`,
+                );
                 const { y } = event;
                 const { page } = this.#setY(y);
                 this.#y = y;
@@ -393,12 +422,16 @@ export default class PageManager {
                 && action !== InternalType.BLOCKED_SELF_DESTROY
                 && action !== InternalType.DONE
             ) {
-                invariant(typeof page === "number", `invalid page: ${page} for action: ${action}`);
+                invariant(
+                    typeof page === "number",
+                    `invalid page: ${page} for action: ${action}`,
+                );
                 newUpdate = { ...newUpdate, [action]: page };
                 const oldState = this.#states[page - 1];
 
                 // TODO: Replace this function w/ chiller error handling
-                const msg = `${page} - invalid (state=${oldState},action=${action}) `;
+                const msg =
+                    `${page} - invalid (state=${oldState},action=${action}) `;
                 const err = (exp: PageState) => {
                     const succ = oldState === exp;
                     if (!succ) {
@@ -408,7 +441,10 @@ export default class PageManager {
                     }
                 };
                 if (action === InternalType.RENDER) {
-                    invariant(this.#outstandingRender === null, `existing render: ${this.#outstandingRender}`);
+                    invariant(
+                        this.#outstandingRender === null,
+                        `existing render: ${this.#outstandingRender}`,
+                    );
                     err(PageState.NONE);
                     // invariant(oldState === PageState.NONE, msg);
                     this.#outstandingRender = page;
@@ -426,7 +462,10 @@ export default class PageManager {
 
         let statesChanged = false;
         for (let i = 0; i < oldStates.length; ++i) {
-            if (this.#states[i] !== PageState.RENDER_DONE && this.#states[i] !== oldStates[i]) {
+            if (
+                this.#states[i] !== PageState.RENDER_DONE
+                && this.#states[i] !== oldStates[i]
+            ) {
                 statesChanged = true;
             }
         }

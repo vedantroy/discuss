@@ -1,5 +1,8 @@
 const Input = (
-    { className, ...props }: React.DetailedHTMLProps<React.InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>,
+    { className, ...props }: React.DetailedHTMLProps<
+        React.InputHTMLAttributes<HTMLInputElement>,
+        HTMLInputElement
+    >,
 ) => (
     <input
         {...props}

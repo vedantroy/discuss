@@ -5,7 +5,12 @@ import PDF_CSS from "~/components/PDFWindow/PDFViewer/styles/page.css";
 import { json, LoaderFunction, useLoaderData, useParams } from "~/mod";
 import { getParam } from "~/route-utils/params";
 import { authenticator } from "~/server/auth.server";
-import { DocumentPayload, ObjectStatusCode, ShortDocumentID, ShortUserID } from "~/server/queries/common";
+import {
+    DocumentPayload,
+    ObjectStatusCode,
+    ShortDocumentID,
+    ShortUserID,
+} from "~/server/queries/common";
 import { getPDFAndClub, PDFContext } from "~/server/queries/d/pdf";
 
 export function links() {
@@ -15,7 +20,10 @@ export function links() {
 export const loader: LoaderFunction = async ({ params, request }) => {
     const docId = getParam(params, "docId");
     const userData = await authenticator.isAuthenticated(request);
-    const doc = await getPDFAndClub(docId as ShortDocumentID, userData?.user?.shortId as ShortUserID);
+    const doc = await getPDFAndClub(
+        docId as ShortDocumentID,
+        userData?.user?.shortId as ShortUserID,
+    );
     if (doc.type === ObjectStatusCode.MISSING) {
         throw json({ error: { type: ObjectStatusCode.MISSING } }, 404);
     }
@@ -28,7 +36,9 @@ export default function Index() {
     const params = useParams();
     const docId = getParam(params, "docId");
 
-    const highlights = data.docCtx.highlights.map(({ page, anchorIdx, focusIdx, shortId, ...rest }) => ({
+    const highlights = data.docCtx.highlights.map((
+        { page, anchorIdx, focusIdx, shortId, ...rest },
+    ) => ({
         id: shortId,
         anchorId: toId(page, anchorIdx),
         focusId: toId(page, focusIdx),
@@ -38,5 +48,13 @@ export default function Index() {
 
     console.log(data.docCtx);
     const { url, width, height } = data.docCtx;
-    return <Viewer width={width} height={height} docId={docId} highlights={highlights} url={url} />;
+    return (
+        <Viewer
+            width={width}
+            height={height}
+            docId={docId}
+            highlights={highlights}
+            url={url}
+        />
+    );
 }

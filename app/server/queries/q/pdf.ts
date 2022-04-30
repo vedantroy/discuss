@@ -1,4 +1,9 @@
-import { Answer as DBAnswer, PDF, PDFRect as DBPDFRect, Vote as DBVote } from "dbschema/edgeql-js";
+import {
+    Answer as DBAnswer,
+    PDF,
+    PDFRect as DBPDFRect,
+    Vote as DBVote,
+} from "dbschema/edgeql-js";
 import db, { e } from "~/server/edgedb.server";
 import {
     canAccessClub,
@@ -46,7 +51,10 @@ const Selectors = {
     },
 } as const;
 
-export async function getPDFQuestion(id: ShortQuestionID, userId?: ShortUserID): Promise<QuestionStatus> {
+export async function getPDFQuestion(
+    id: ShortQuestionID,
+    userId?: ShortUserID,
+): Promise<QuestionStatus> {
     const query = e.select(e.PDFPost, post => ({
         id: true,
         shortId: true,

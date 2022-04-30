@@ -19,7 +19,13 @@ import { isLoggedIn } from "~/route-utils/session";
 import { authenticator } from "~/server/auth.server";
 import { ObjectStatusCode, ShortQuestionID } from "~/server/queries/common";
 import { createVote, removeVote } from "~/server/queries/q/common";
-import { Answer, getPDFQuestion, MyVote, Question, submitAnswer } from "~/server/queries/q/pdf";
+import {
+    Answer,
+    getPDFQuestion,
+    MyVote,
+    Question,
+    submitAnswer,
+} from "~/server/queries/q/pdf";
 import colors from "~/vendor/tailwindcss/colors";
 
 export function links() {
@@ -62,10 +68,17 @@ export const action: ActionFunction = async ({ request, params }) => {
         });
     } else if (subaction == "vote") {
         const voteData = Object.fromEntries(formData);
-        const { actionType, voteType, parentId } = voteData as Record<string, string>;
+        const { actionType, voteType, parentId } = voteData as Record<
+            string,
+            string
+        >;
         switch (actionType) {
             case "create":
-                await createVote({ userId, votableUUID: parentId, up: voteType === "up" });
+                await createVote({
+                    userId,
+                    votableUUID: parentId,
+                    up: voteType === "up",
+                });
                 break;
             case "remove":
                 await removeVote({ userId, votableUUID: parentId });
@@ -81,7 +94,10 @@ export const loader: LoaderFunction = async ({ request, context, params }) => {
     const userData = await authenticator.isAuthenticated(request);
     const user = isLoggedIn(userData);
     const questionId = getParam(params, "questionId");
-    const question = await getPDFQuestion(questionId as ShortQuestionID, user?.shortId);
+    const question = await getPDFQuestion(
+        questionId as ShortQuestionID,
+        user?.shortId,
+    );
     if (question.type === ObjectStatusCode.MISSING) {
         throwNotFoundResponse();
     }
@@ -100,7 +116,9 @@ const QuestionBadge = ({ createdDate, userId, displayName, prefix }: BadgeProps)
         className="w-[200px] text-gray-500 bg-sky-100 ml-auto"
         style={{ padding: "5px 6px 7px 7px" }}
     >
-        <div className="text-xs">{prefix} {format(createdDate, "MMM, yyyy 'at' kk:mm")}</div>
+        <div className="text-xs">
+            {prefix} {format(createdDate, "MMM, yyyy 'at' kk:mm")}
+        </div>
         <div className="flex flex-row mt-1 items-center">
             <Denticon displayName={displayName} />
             <Link
@@ -131,15 +149,26 @@ function Arrow({ up, active, id }: { up: boolean; active: boolean; id: string })
     // TODO: The SVG has unnecessary height
     return (
         <SubForm subaction="vote" className="inline" method="post">
-            <input type="hidden" name="actionType" value={active ? "remove" : "create"}></input>
+            <input
+                type="hidden"
+                name="actionType"
+                value={active ? "remove" : "create"}
+            >
+            </input>
             <input type="hidden" name="voteType" value={up ? "up" : "down"}></input>
             <input type="hidden" name="parentId" value={id}></input>
             <button type="submit">
                 <span>
-                    <svg width="36" height="26" {...(up && { transform: "scale(-1 -1)" })}>
+                    <svg
+                        width="36"
+                        height="26"
+                        {...(up && { transform: "scale(-1 -1)" })}
+                    >
                         <path
                             d="M2 10h32L18 26 2 10z"
-                            fill={active ? up ? colors.green[400] : colors.rose[400] : colors.gray[400]}
+                            fill={active
+                                ? up ? colors.green[400] : colors.rose[400]
+                                : colors.gray[400]}
                         >
                         </path>
                     </svg>
@@ -158,7 +187,12 @@ const Vote = ({ vote, score, id }: { vote?: MyVote; score: number; id: string })
 );
 
 const PostFrame = (
-    { children, score, id, vote }: { children: React.ReactNode; score: number; id: string; vote?: MyVote },
+    { children, score, id, vote }: {
+        children: React.ReactNode;
+        score: number;
+        id: string;
+        vote?: MyVote;
+    },
 ) => (
     <Row className="w-full gap-x-2">
         <Col className="items-center w-fit">
@@ -222,14 +256,16 @@ export default function() {
     return (
         <>
             <Toaster position="bottom-right" />
-            <div className="w-full max-w-[1264px] my-0 mx-auto px-4">
+            <div className="Container-Width my-0">
                 <div className="flex flex-col">
                     <h1 className="text-3xl break-words mt-6">{title}</h1>
                     <div className="flex flex-row">
                         <div className="text-sm mt-2 text-gray-500">Asked&nbsp;</div>
                         <div className="text-sm mt-2">
                             {/* TODO: Use better date formatting */}
-                            {formatDistanceToNowStrict(createdDate, { addSuffix: true })}
+                            {formatDistanceToNowStrict(createdDate, {
+                                addSuffix: true,
+                            })}
                             &nbsp;
                         </div>
                     </div>
@@ -246,11 +282,14 @@ export default function() {
                         <div className="flex flex-row w-full mt-4">
                             <button
                                 onClick={(_) => {
-                                    const url = `${location.protocol}//${location.host}/q/pdf/${shortId}`;
+                                    const url =
+                                        `${location.protocol}//${location.host}/q/pdf/${shortId}`;
                                     if (copy(url)) {
                                         toast.success(`Url copied to clipboard`);
                                     } else {
-                                        toast.error(`Failed to copy url to clipboard`);
+                                        toast.error(
+                                            `Failed to copy url to clipboard`,
+                                        );
                                     }
                                 }}
                                 className="text-sm text-gray-500 h-min"

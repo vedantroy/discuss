@@ -75,7 +75,9 @@ export function fromURLSearchParams(ctx: SubmitContextSerialized): SubmitContext
     const { ltwh: rawLtwh, rects: rawRects, p: rawPage } = ctx;
     const ltwh = deserializeCommaArray(rawLtwh);
     const rectValues = deserializeCommaArray(rawRects);
-    const rects: Rect[] = _.chunk(rectValues, 4).map(([left, top, width, height]) => ({
+    const rects: Rect[] = _.chunk(rectValues, 4).map((
+        [left, top, width, height],
+    ) => ({
         x: left,
         y: top,
         width,

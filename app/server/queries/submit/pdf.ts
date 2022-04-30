@@ -16,7 +16,9 @@ type PDFPostProps = {
     excerpt: string;
 };
 
-export async function createPDFPost(props: CommonPostProps & PDFPostProps): Promise<ShortQuestionID> {
+export async function createPDFPost(
+    props: CommonPostProps & PDFPostProps,
+): Promise<ShortQuestionID> {
     // https://github.com/edgedb/edgedb/discussions/3786?sort=top
     const shortId = nanoid();
 
@@ -25,10 +27,16 @@ export async function createPDFPost(props: CommonPostProps & PDFPostProps): Prom
         createdAt: e.datetime_of_transaction(),
         title: props.title,
         content: props.content,
-        user: e.select(e.User, user => ({ limit: 1, filter: e.op(user.shortId, "=", props.userId) })),
+        user: e.select(
+            e.User,
+            user => ({ limit: 1, filter: e.op(user.shortId, "=", props.userId) }),
+        ),
         excerptRect: e.insert(e.PDFRect, props.excerptRect),
         rects: e.set(...props.rects.map(r => e.insert(e.PDFRect, r))),
-        document: e.select(e.PDF, doc => ({ limit: 1, filter: e.op(doc.shortId, "=", props.document) })),
+        document: e.select(
+            e.PDF,
+            doc => ({ limit: 1, filter: e.op(doc.shortId, "=", props.document) }),
+        ),
         anchorIdx: props.anchorIdx,
         focusIdx: props.focusIdx,
         anchorOffset: props.anchorOffset,

@@ -34,7 +34,9 @@ export async function insertUserWithGoogleIdentity(
 }
 
 // Get the Google OAuth data if it exists
-export async function getUserFromGoogleIdentity(sub: string): Promise<{ shortId: ShortUserID } | null> {
+export async function getUserFromGoogleIdentity(
+    sub: string,
+): Promise<{ shortId: ShortUserID } | null> {
     const query = e.select(e.GoogleIdentity, google => ({
         user: {
             shortId: true,

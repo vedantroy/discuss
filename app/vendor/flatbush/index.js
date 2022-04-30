@@ -24,17 +24,28 @@ export default class Flatbush {
             throw new Error("Data does not appear to be in a Flatbush format.");
         }
         if (versionAndType >> 4 !== VERSION) {
-            throw new Error(`Got v${versionAndType >> 4} data when expected v${VERSION}.`);
+            throw new Error(
+                `Got v${versionAndType >> 4} data when expected v${VERSION}.`,
+            );
         }
         const [nodeSize] = new Uint16Array(data, 2, 1);
         const [numItems] = new Uint32Array(data, 4, 1);
 
-        return new Flatbush(numItems, nodeSize, ARRAY_TYPES[versionAndType & 0x0f], data);
+        return new Flatbush(
+            numItems,
+            nodeSize,
+            ARRAY_TYPES[versionAndType & 0x0f],
+            data,
+        );
     }
 
     constructor(numItems, nodeSize = 16, ArrayType = Float64Array, data) {
-        if (numItems === undefined) throw new Error("Missing required argument: numItems.");
-        if (isNaN(numItems) || numItems <= 0) throw new Error(`Unpexpected numItems value: ${numItems}.`);
+        if (numItems === undefined) {
+            throw new Error("Missing required argument: numItems.");
+        }
+        if (isNaN(numItems) || numItems <= 0) {
+            throw new Error(`Unpexpected numItems value: ${numItems}.`);
+        }
 
         this.numItems = +numItems;
         this.nodeSize = Math.min(Math.max(+nodeSize, 2), 65535);
@@ -63,7 +74,11 @@ export default class Flatbush {
         if (data && (data instanceof ArrayBuffer)) {
             this.data = data;
             this._boxes = new this.ArrayType(this.data, 8, numNodes * 4);
-            this._indices = new this.IndexArrayType(this.data, 8 + nodesByteSize, numNodes);
+            this._indices = new this.IndexArrayType(
+                this.data,
+                8 + nodesByteSize,
+                numNodes,
+            );
 
             this._pos = numNodes * 4;
             this.minX = this._boxes[this._pos - 4];
@@ -71,16 +86,25 @@ export default class Flatbush {
             this.maxX = this._boxes[this._pos - 2];
             this.maxY = this._boxes[this._pos - 1];
         } else {
-            this.data = new ArrayBuffer(8 + nodesByteSize + numNodes * this.IndexArrayType.BYTES_PER_ELEMENT);
+            this.data = new ArrayBuffer(
+                8 + nodesByteSize + numNodes * this.IndexArrayType.BYTES_PER_ELEMENT,
+            );
             this._boxes = new this.ArrayType(this.data, 8, numNodes * 4);
-            this._indices = new this.IndexArrayType(this.data, 8 + nodesByteSize, numNodes);
+            this._indices = new this.IndexArrayType(
+                this.data,
+                8 + nodesByteSize,
+                numNodes,
+            );
             this._pos = 0;
             this.minX = Infinity;
             this.minY = Infinity;
             this.maxX = -Infinity;
             this.maxY = -Infinity;
 
-            new Uint8Array(this.data, 0, 2).set([0xfb, (VERSION << 4) + arrayTypeIndex]);
+            new Uint8Array(this.data, 0, 2).set([
+                0xfb,
+                (VERSION << 4) + arrayTypeIndex,
+            ]);
             new Uint16Array(this.data, 2, 1)[0] = nodeSize;
             new Uint32Array(this.data, 4, 1)[0] = numItems;
         }
@@ -107,7 +131,9 @@ export default class Flatbush {
 
     finish() {
         if (this._pos >> 2 !== this.numItems) {
-            throw new Error(`Added ${this._pos >> 2} items when expected ${this.numItems}.`);
+            throw new Error(
+                `Added ${this._pos >> 2} items when expected ${this.numItems}.`,
+            );
         }
 
         if (this.numItems <= this.nodeSize) {
@@ -131,13 +157,24 @@ export default class Flatbush {
             const minY = this._boxes[pos++];
             const maxX = this._boxes[pos++];
             const maxY = this._boxes[pos++];
-            const x = Math.floor(hilbertMax * ((minX + maxX) / 2 - this.minX) / width);
-            const y = Math.floor(hilbertMax * ((minY + maxY) / 2 - this.minY) / height);
+            const x = Math.floor(
+                hilbertMax * ((minX + maxX) / 2 - this.minX) / width,
+            );
+            const y = Math.floor(
+                hilbertMax * ((minY + maxY) / 2 - this.minY) / height,
+            );
             hilbertValues[i] = hilbert(x, y);
         }
 
         // sort items by their Hilbert value (for packing later)
-        sort(hilbertValues, this._boxes, this._indices, 0, this.numItems - 1, this.nodeSize);
+        sort(
+            hilbertValues,
+            this._boxes,
+            this._indices,
+            0,
+            this.numItems - 1,
+            this.nodeSize,
+        );
 
         // generate nodes at each tree level, bottom-up
         for (let i = 0, pos = 0; i < this._levelBounds.length - 1; i++) {
@@ -180,7 +217,10 @@ export default class Flatbush {
 
         while (nodeIndex !== undefined) {
             // find the end index of the node
-            const end = Math.min(nodeIndex + this.nodeSize * 4, upperBound(nodeIndex, this._levelBounds));
+            const end = Math.min(
+                nodeIndex + this.nodeSize * 4,
+                upperBound(nodeIndex, this._levelBounds),
+            );
 
             // search through child nodes
             for (let pos = nodeIndex; pos < end; pos += 4) {
@@ -217,7 +257,10 @@ export default class Flatbush {
 
         while (nodeIndex !== undefined) {
             // find the end index of the node
-            const end = Math.min(nodeIndex + this.nodeSize * 4, upperBound(nodeIndex, this._levelBounds));
+            const end = Math.min(
+                nodeIndex + this.nodeSize * 4,
+                upperBound(nodeIndex, this._levelBounds),
+            );
 
             // add child nodes to the queue
             for (let pos = nodeIndex; pos < end; pos += 4) {

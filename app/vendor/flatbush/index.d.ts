@@ -21,7 +21,11 @@ declare class FlatbushClass {
      * @param nodeSize size of the tree node, experiment with different values for best performance. Default 16.
      * @param arrayType The array type used for coordinates storage. Other types may be faster in certain cases. Default Float64Array.
      */
-    constructor(numItems: number, nodeSize?: number, arrayType?: TypedArrayConstructor);
+    constructor(
+        numItems: number,
+        nodeSize?: number,
+        arrayType?: TypedArrayConstructor,
+    );
 
     /**
      * Adds a given rectangle to the index. Returns a zero-based, incremental number that represents the newly added rectangle.
@@ -36,7 +40,13 @@ declare class FlatbushClass {
     /**
      * Returns an array of indices of items in a given bounding box.
      */
-    search(minX: number, minY: number, maxX: number, maxY: number, filter?: (idx: number) => boolean): number[];
+    search(
+        minX: number,
+        minY: number,
+        maxX: number,
+        maxY: number,
+        filter?: (idx: number) => boolean,
+    ): number[];
 
     /**
      * Returns an array of item indices in order of distance from the given x, y (known as K nearest neighbors, or KNN).

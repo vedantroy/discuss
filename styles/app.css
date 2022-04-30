@@ -6,11 +6,17 @@
    and will be loaded for every page.
 
    We do this because we want to use this class on inputs and textareas
+
+   TODO: I bet tailwind forms handles this already...
 */
 
 .Form-Input {
         @apply rounded appearance-none border-solid border-gray-400 focus:border-sky-500 border focus:border-2 focus:outline-none
 
+}
+
+.Container-Width {
+        @apply w-full max-w-[1264px] mx-auto
 }
 
 /* This is fussy on mobile browsers

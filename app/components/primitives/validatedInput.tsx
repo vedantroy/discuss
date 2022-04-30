@@ -20,7 +20,11 @@ const ValidatedInput = ({ type, name, onChange, className }: MyInputProps) => {
     }
     return (
         <div>
-            <Input type={type} className={`p-1 text-base ${className || ""}`} {...props} />
+            <Input
+                type={type}
+                className={`p-1 text-base ${className || ""}`}
+                {...props}
+            />
             {error && <div className="text-xs mt-0.5 text-rose-600">{error}</div>}
         </div>
     );

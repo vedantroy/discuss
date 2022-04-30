@@ -7,7 +7,13 @@ import { ValidatedForm, validationError } from "remix-validated-form";
 import invariant from "tiny-invariant";
 import * as yup from "yup";
 import ValidatedInput from "~/components/primitives/validatedInput";
-import { ActionFunction, json, LoaderFunction, redirect, useLoaderData } from "~/mod";
+import {
+    ActionFunction,
+    json,
+    LoaderFunction,
+    redirect,
+    useLoaderData,
+} from "~/mod";
 import { getParam } from "~/route-utils/params";
 import { getSession, setSessionHeader } from "~/route-utils/session";
 import { authenticator, UserSession } from "~/server/auth.server";
@@ -29,14 +35,29 @@ function makeConsecutiveChecker(char: string, n: number, prefix: string) {
             }
             return true;
         },
-        msg: `${prefix} cannot have more than ${n} consecutive ${char === " " ? "spaces" : `${char}`}`,
+        msg: `${prefix} cannot have more than ${n} consecutive ${
+            char === " " ? "spaces" : `${char}`
+        }`,
     };
 }
 
 const PREFIX = "Display name";
-const { validator: hypenValidator, msg: hypenMsg } = makeConsecutiveChecker("-", 1, PREFIX);
-const { validator: underscoreValidator, msg: underscoreMsg } = makeConsecutiveChecker("_", 1, PREFIX);
-const { validator: spaceValidator, msg: spaceMsg } = makeConsecutiveChecker(" ", 1, PREFIX);
+const { validator: hypenValidator, msg: hypenMsg } = makeConsecutiveChecker(
+    "-",
+    1,
+    PREFIX,
+);
+const { validator: underscoreValidator, msg: underscoreMsg } =
+    makeConsecutiveChecker(
+        "_",
+        1,
+        PREFIX,
+    );
+const { validator: spaceValidator, msg: spaceMsg } = makeConsecutiveChecker(
+    " ",
+    1,
+    PREFIX,
+);
 
 const INPUT_DISPLAY_NAME = "displayName";
 const DISPLAY_MIN = 3;
@@ -78,7 +99,9 @@ export let action: ActionFunction = async ({ request, params }) => {
         case SocialsProvider.GOOGLE:
             const iden = userData.meta.google;
             invariant(iden, `Missing google identity`);
-            const { profile: { displayName: googDisplayName, _json: { email, sub } } } = iden;
+            const {
+                profile: { displayName: googDisplayName, _json: { email, sub } },
+            } = iden;
             userId = await insertUserWithGoogleIdentity({
                 user: { displayName, email },
                 google: { sub, email, displayName: googDisplayName },
@@ -151,18 +174,24 @@ export default function() {
                         className="flex flex-col"
                     >
                         <label className="font-bold text-base">Display name</label>
-                        <div className="text-sm text-gray-500 mb-1">This is shown on posts and comments</div>
+                        <div className="text-sm text-gray-500 mb-1">
+                            This is shown on posts and comments
+                        </div>
                         <ValidatedInput
                             className="w-full"
                             name={INPUT_DISPLAY_NAME}
                             onChange={e => setDisplayName(e.target.value)}
                         />
-                        <label className="font-bold text-base mt-6">Profile Picture</label>
+                        <label className="font-bold text-base mt-6">
+                            Profile Picture
+                        </label>
                         <div className="flex flex-row">
                             <svg id={DENTICON_ID} width={96} height={96}></svg>
                             <div>TODO: Support other propic options</div>
                         </div>
-                        <button type="submit" className="btn btn-primary mt-6">Create</button>
+                        <button type="submit" className="btn btn-primary mt-6">
+                            Create
+                        </button>
                     </ValidatedForm>
                 </div>
             </div>

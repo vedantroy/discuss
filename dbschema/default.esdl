@@ -4,16 +4,21 @@
 # or should deleted users just be anonymized & but kept in the DB?
 
 module default {
+	type AccessPolicy {
+		required property public -> bool;
+		multi link writers -> User;
+		multi link admins -> User;
+	}
+
 	# for now all clubs are public
 	type Club {
 		required property name -> str;
 		# for now: this will always be true
-		required property public -> bool;
 		required property shortId -> str {
 			constraint exclusive;
 		}
 		multi link documents := .<club[is Document];
-		multi link users -> User;
+		required link accessPolicy -> AccessPolicy;
 	}
 
 	# TODO: Add type discriminator

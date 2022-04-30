@@ -1,6 +1,11 @@
 import { Authenticator } from "remix-auth";
 import { OAuth2StrategyVerifyParams } from "remix-auth-oauth2";
-import { GoogleExtraParams, GoogleProfile, GoogleStrategy, SocialsProvider } from "remix-auth-socials";
+import {
+    GoogleExtraParams,
+    GoogleProfile,
+    GoogleStrategy,
+    SocialsProvider,
+} from "remix-auth-socials";
 import { createCookieSessionStorage } from "~/mod";
 import getenv from "~/vendor/getenv.ts";
 import { getUserFromGoogleIdentity } from "./queries/auth";
@@ -54,7 +59,10 @@ export const SESSION_REDIRECT_KEY = "auth:redirect";
 export type UserSession = {
     meta: {
         userExists?: boolean;
-        [SocialsProvider.GOOGLE]?: OAuth2StrategyVerifyParams<GoogleProfile, GoogleExtraParams>;
+        [SocialsProvider.GOOGLE]?: OAuth2StrategyVerifyParams<
+            GoogleProfile,
+            GoogleExtraParams
+        >;
     };
     user?: {
         shortId: ShortUserID;

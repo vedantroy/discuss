@@ -1,5 +1,7 @@
 # Infrastructure
+
 ## EdgeDB
+
 ### AWS
 
 - Run AWS Aurora Postgres (or AWS RDS Postgres)
@@ -12,6 +14,7 @@
   - To check if the EC2 instance has access to the Postgres instance:
     - `telnet <postgres hostname> 5432`
   - Get an AWS elastic IP & assign it for the proxy
+
 ### Server Config
 
 - Follow the [bare metal](https://www.edgedb.com/docs/guides/deployment/bare_metal) guide
@@ -38,4 +41,5 @@ path/to/server --backend-dsn $EDGEDB_SERVER_BACKEND_DSN --tls-cert-mode generate
 - If you aren't using TLS you can remove the `--tls-cert-file` and `--tls-key-file` options and use `--tls-security=insecure` on the client
 
 ## Storage
+
 We're using minIO on fly.io for S3 storage

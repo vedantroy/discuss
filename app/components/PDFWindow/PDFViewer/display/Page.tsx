@@ -3,7 +3,11 @@
 // TODO: Implement zoom & search ...
 import _ from "lodash";
 import type { PDFPageProxy } from "pdfjs-dist";
-import type { RenderParameters, RenderTask, TextContent } from "pdfjs-dist/types/src/display/api";
+import type {
+    RenderParameters,
+    RenderTask,
+    TextContent,
+} from "pdfjs-dist/types/src/display/api";
 import type { PageViewport } from "pdfjs-dist/types/web/interfaces";
 import React from "react";
 import { useEffect, useRef, useState } from "react";
@@ -51,7 +55,16 @@ type PageProps = {
 };
 
 function renderGraphics(
-    { canvasRef, viewport, page, renderTaskRef, outstandingRender, pageNum, renderFinished, setInternalState }: {
+    {
+        canvasRef,
+        viewport,
+        page,
+        renderTaskRef,
+        outstandingRender,
+        pageNum,
+        renderFinished,
+        setInternalState,
+    }: {
         pageNum: number;
         renderFinished: ((n: number) => void) | undefined;
         page: PDFPageProxy;
@@ -82,7 +95,9 @@ function renderGraphics(
                 invariant(renderFinished, `no render callback when render finished`);
                 renderFinished(pageNum);
             } else {
-                console.log(`${pageNum} no render callback b/c ${outstandingRender}`);
+                console.log(
+                    `${pageNum} no render callback b/c ${outstandingRender}`,
+                );
             }
         })
         .catch((e: unknown) => {
@@ -135,15 +150,21 @@ function Page(
     // doesn't seem like worth using redux b/c we don't need to update anything - can prop drill
 
     const [activeHighlights, setActiveHighlights] = useState<Set<string>>(new Set());
-    const [highlightState, setHighlightState] = useState<HighlightState | null>(null);
+    const [highlightState, setHighlightState] = useState<HighlightState | null>(
+        null,
+    );
 
     const textContent = useRef<TextContent | null>(null);
-    const textContentPromise = useRef<{ p: Promise<TextContent> | null }>({ p: null });
+    const textContentPromise = useRef<{ p: Promise<TextContent> | null }>({
+        p: null,
+    });
 
     const pageRef = useRef<HTMLDivElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const renderTaskRef = useRef<RenderTask>(null);
-    const [internalState, setInternalState] = useState<InternalState>(InternalState.CANVAS_NONE);
+    const [internalState, setInternalState] = useState<InternalState>(
+        InternalState.CANVAS_NONE,
+    );
     const { width, height } = viewport;
 
     const pageTextId = getPageTextId(pageNum);
@@ -157,17 +178,26 @@ function Page(
         const { x, y } = pageTextContainer.getBoundingClientRect();
 
         invariant(pageTextContainer, `id: ${pageTextId} not found`);
-        invariant(pageTextContainer.innerHTML === textInfo.html, `stale layout (use useLayoutEffect)`);
+        invariant(
+            pageTextContainer.innerHTML === textInfo.html,
+            `stale layout (use useLayoutEffect)`,
+        );
 
         const ids = new Set(
             highlights.flatMap(c => ["#" + c.anchorId, "#" + c.focusId]),
         );
-        const spans = Array.from(pageTextContainer.querySelectorAll<HTMLSpanElement>(Array.from(ids).join(", ")));
+        const spans = Array.from(
+            pageTextContainer.querySelectorAll<HTMLSpanElement>(
+                Array.from(ids).join(", "),
+            ),
+        );
         const idToSpan = _.fromPairs(spans.map(span => [span.id, span]));
 
         let allRects: HighlightState["rects"] = [];
         const idToRects: HighlightState["idToRects"] = {};
-        for (const { anchorId, focusId, anchorOffset, focusOffset, id } of highlights) {
+        for (
+            const { anchorId, focusId, anchorOffset, focusOffset, id } of highlights
+        ) {
             const start = idToSpan[anchorId];
             const end = idToSpan[focusId];
 
@@ -187,13 +217,16 @@ function Page(
         // since that is a source of buggy behavior (never sync a data structure to an expected state
         // just re-create it -- that's the React way)
         const flatbush = new Flatbush(allRects.length);
-        allRects.forEach(({ rect: { x, y, width, height } }) => flatbush.add(x, y, x + width, y + height));
+        allRects.forEach(({ rect: { x, y, width, height } }) =>
+            flatbush.add(x, y, x + width, y + height)
+        );
         flatbush.finish();
 
         setHighlightState({ flatbush, rects: allRects, idToRects });
     }, [textInfo?.html, highlights]);
 
-    const stateDescription = `(internal=${internalState}, render=${state}, page=${pageNum})`;
+    const stateDescription =
+        `(internal=${internalState}, render=${state}, page=${pageNum})`;
 
     useEffect(() => {
         let cancel = false;
@@ -218,14 +251,19 @@ function Page(
             try {
                 await task.promise;
                 if (!cancel) {
-                    let rootElement: HTMLDivElement | null = document.createElement("div");
+                    let rootElement: HTMLDivElement | null = document.createElement(
+                        "div",
+                    );
                     rootElement.appendChild(frag);
                     const textHTML = rootElement.innerHTML;
 
                     let id = 0;
                     // This is ok -- b/c PDF.JS escapes < & > so we won't overwrite content
                     // in the doc itself
-                    const withIds = textHTML.replace(/<span/g, () => `<span id="${toId(pageNum, id++)}"`);
+                    const withIds = textHTML.replace(
+                        /<span/g,
+                        () => `<span id="${toId(pageNum, id++)}"`,
+                    );
 
                     // TODO: Does this cause actual GC? Do we even need this line? Does it do anything?
                     // (I suspect answers are all no)
@@ -297,10 +335,16 @@ function Page(
                             renderTaskRef.current.cancel();
                         }
                     case InternalState.CANVAS_DONE:
-                        invariant(destroyFinished, `Invalid cleanup callback: ${stateDescription}`);
+                        invariant(
+                            destroyFinished,
+                            `Invalid cleanup callback: ${stateDescription}`,
+                        );
 
                         const { current: canvas } = canvasRef;
-                        invariant(canvas, `${stateDescription} no canvas on destroy`);
+                        invariant(
+                            canvas,
+                            `${stateDescription} no canvas on destroy`,
+                        );
                         // PDF.js viewer states zeroing width/height
                         // causes Firefox to release graphics resources immediately
                         // reducing memory consumption
@@ -343,7 +387,8 @@ function Page(
         backgroundColor: "white",
     };
 
-    return (internalState === InternalState.CANVAS_RENDERING || internalState === InternalState.CANVAS_DONE
+    return (internalState === InternalState.CANVAS_RENDERING
+            || internalState === InternalState.CANVAS_DONE
             || internalState === InternalState.CANVAS_RERENDERING)
         ? (
             // TODO: Is data-page only used for debugging?
@@ -387,7 +432,9 @@ function Page(
                 {highlightState
                     && (
                         <div className="inset-0 absolute w-0 h-0">
-                            {_.toPairs(highlightState.idToRects).map(([id, rects]) => (
+                            {_.toPairs(highlightState.idToRects).map((
+                                [id, rects],
+                            ) => (
                                 <HighlightArea
                                     key={id}
                                     active={activeHighlights.has(id)

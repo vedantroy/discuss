@@ -15,6 +15,8 @@ export type ShortClubID = Brand<string, "ShortClubID">;
 export type ShortDocumentID = Brand<string, "ShortDocumentID">;
 export type ShortQuestionID = Brand<string, "ShortQuestionID">;
 
+export type Club = Pick<DBClub, "shortId" | "name">;
+
 export const ObjectStatusCode = {
     MISSING: "missing",
     NEED_INVITE: "need_invite",
@@ -37,7 +39,9 @@ export type ClubResource<T> =
     | { type: ObjectStatusCode["NEED_LOGIN_INFO"] }
     | { type: ObjectStatusCode["VALID"]; payload: T };
 
-export type UserPreview = Pick<DBUser, "displayName" | "image"> & { shortId: string };
+export type UserPreview = Pick<DBUser, "displayName" | "image"> & {
+    shortId: string;
+};
 export type ClubPreview = Pick<DBClub, "shortId" | "name">;
 
 export function canAccessClub(
@@ -56,7 +60,10 @@ export const userFromId = (userId: ShortUserID) =>
         filter: e.op(user.shortId, "=", userId),
     }));
 
-export function runQuery(q: Expression<any>, { log }: { log: boolean } = { log: false }): Promise<void> {
+export function runQuery(
+    q: Expression<any>,
+    { log }: { log: boolean } = { log: false },
+): Promise<void> {
     if (log) {
         console.log(q.toEdgeQL());
     }

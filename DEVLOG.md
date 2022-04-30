@@ -1,3 +1,11 @@
+# 29-04-2022
+
+IT IS A 7AM DAY. YESSIR.
+I want to implement all the important features by the end of the day.
+Club UI. Upload your own documents. Then send a message to all relevant groupchats.
+
+With deploy done, this is possible.
+
 # 19-04-2022
 
 Auth is finally done.

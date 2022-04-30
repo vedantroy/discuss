@@ -13,7 +13,9 @@ type TextAreaProps = {
     defaultValue?: string;
     // onChange: (value: React.ChangeEvent<HTMLInputElement>) => void;
 };
-const ValidatedTextarea = ({ name, /* onChange, */ className, defaultValue }: TextAreaProps) => {
+const ValidatedTextarea = (
+    { name, /* onChange, */ className, defaultValue }: TextAreaProps,
+) => {
     const { error, getInputProps } = useField(name);
     const { onBlur, onChange, ...rest } = getInputProps({ id: name });
     const [text, setText] = useState(defaultValue || "");

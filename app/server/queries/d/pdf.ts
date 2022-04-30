@@ -2,7 +2,14 @@ import { PDFPost } from "dbschema/edgeql-js";
 import _ from "lodash";
 import invariant from "tiny-invariant";
 import db, { e } from "~/server/edgedb.server";
-import { ClubResource, DocumentPayload, ObjectStatusCode, ShortClubID, ShortDocumentID, ShortUserID } from "../common";
+import {
+    ClubResource,
+    DocumentPayload,
+    ObjectStatusCode,
+    ShortClubID,
+    ShortDocumentID,
+    ShortUserID,
+} from "../common";
 
 // Gonna flex my type checking on you
 const pdfHighlightFields = [
@@ -56,7 +63,10 @@ export async function getPDFAndClub(
         url: true,
         baseWidth: true,
         baseHeight: true,
-        posts: _.fromPairs(pdfHighlightFields.map(k => [k, true])) as Record<PDFHighlightField, true>,
+        posts: _.fromPairs(pdfHighlightFields.map(k => [k, true])) as Record<
+            PDFHighlightField,
+            true
+        >,
         filter: e.op(pdf.shortId, "=", docId),
         limit: 1,
     }));

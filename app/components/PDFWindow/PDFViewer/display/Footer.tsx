@@ -37,16 +37,27 @@ type PageProps = {
     linkedHighlights: Set<string>;
 };
 
-const Page = ({ page, highlights, activeHighlights, linkedHighlights }: PageProps) => {
-    const ordered = highlights.sort((a, b) => fromId(a.anchorId)[1] - fromId(b.anchorId)[1]);
+const Page = (
+    { page, highlights, activeHighlights, linkedHighlights }: PageProps,
+) => {
+    const ordered = highlights.sort((a, b) =>
+        fromId(a.anchorId)[1] - fromId(b.anchorId)[1]
+    );
 
     return (
         <>
-            <div className="divider divider-horizontal my-3 text-zinc-800">{page}</div>
+            <div className="divider divider-horizontal my-3 text-zinc-800">
+                {page}
+            </div>
             <div className="flex flex-row gap-4">
                 {ordered.map(({ title, id }) => (
                     <Link to={`/q/pdf/${id}`} target="_blank">
-                        <Card key={id} active={activeHighlights.has(id) || linkedHighlights.has(id)} text={title} />
+                        <Card
+                            key={id}
+                            active={activeHighlights.has(id)
+                                || linkedHighlights.has(id)}
+                            text={title}
+                        />
                     </Link>
                 ))}
             </div>
@@ -60,7 +71,9 @@ type FooterProps = {
     pageToHighlights: Record<number, PostHighlight[]>;
 };
 
-export default function({ activeHighlights, pageToHighlights, linkedHighlights }: FooterProps) {
+export default function(
+    { activeHighlights, pageToHighlights, linkedHighlights }: FooterProps,
+) {
     const pages = _(pageToHighlights)
         .keys()
         // R.C bug :) -- (parseInt takes 2 params)
