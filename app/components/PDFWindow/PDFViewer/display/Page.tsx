@@ -225,8 +225,7 @@ function Page(
         setHighlightState({ flatbush, rects: allRects, idToRects });
     }, [textInfo?.html, highlights]);
 
-    const stateDescription =
-        `(internal=${internalState}, render=${state}, page=${pageNum})`;
+    const stateDescription = `(internal=${internalState}, render=${state}, page=${pageNum})`;
 
     useEffect(() => {
         let cancel = false;

@@ -1,5 +1,9 @@
+import type { Brand } from "ts-brand";
+
 export type FileStorage = {
-    getFile(path: string): null | Buffer;
-    // writeNewFile(path: string): void;
-    init(opts: { dirs: string[] }): void;
+    createFile(buf: Buffer): Promise<StoredDocumentID>;
+    getFile(path: StoredDocumentID): Promise<null | Buffer>;
+    // init(opts: { dirs: string[] }): void;
 };
+
+export type StoredDocumentID = Brand<string, "StoredDocumentID">;

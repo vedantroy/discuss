@@ -95,9 +95,7 @@ export function makeRenderQueues(
         }
 
         const queue = rangeInclusive(lo, hi);
-        queue.sort((a, b) =>
-            getPriority(currentPage, a) - getPriority(currentPage, b)
-        );
+        queue.sort((a, b) => getPriority(currentPage, a) - getPriority(currentPage, b));
 
         queues[currentPage - 1] = queue;
     }
@@ -137,8 +135,7 @@ export default class PageManager {
     onUpdate: (u: Update) => void;
 
     constructor(
-        { renderQueues, pageBufferSize, hGap, vGap, baseViewport, pages }:
-            PageManagerOpts,
+        { renderQueues, pageBufferSize, hGap, vGap, baseViewport, pages }: PageManagerOpts,
     ) {
         invariant(
             pageBufferSize % 2 === 1 && pageBufferSize > 0,
@@ -209,9 +206,8 @@ export default class PageManager {
         }
 
         const pageBufferFull = this.#rendered.size === this.#pageBufferSize;
-        const pageBufferAlmostFull =
-            (this.#rendered.size === this.#pageBufferSize - 1
-                && this.#outstandingRender !== null);
+        const pageBufferAlmostFull = (this.#rendered.size === this.#pageBufferSize - 1
+            && this.#outstandingRender !== null);
 
         if (pageBufferFull || pageBufferAlmostFull) {
             // Case 2: We can't render b/c there's no space
@@ -430,8 +426,7 @@ export default class PageManager {
                 const oldState = this.#states[page - 1];
 
                 // TODO: Replace this function w/ chiller error handling
-                const msg =
-                    `${page} - invalid (state=${oldState},action=${action}) `;
+                const msg = `${page} - invalid (state=${oldState},action=${action}) `;
                 const err = (exp: PageState) => {
                     const succ = oldState === exp;
                     if (!succ) {

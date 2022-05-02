@@ -38,7 +38,7 @@ export type Question = {
     createdAt: string;
     answers: Array<Answer>;
     user: UserPreview;
-    document: Pick<PDF, "shortId" | "url"> & { club: ClubPreview };
+    document: Pick<PDF, "shortId"> & { club: ClubPreview };
 };
 export type QuestionStatus = ClubResource<Question>;
 
@@ -92,7 +92,6 @@ export async function getPDFQuestion(
         },
         filter: e.op(post.shortId, "=", id),
         document: {
-            url: true,
             shortId: true,
             club: {
                 name: true,

@@ -40,9 +40,7 @@ type PageProps = {
 const Page = (
     { page, highlights, activeHighlights, linkedHighlights }: PageProps,
 ) => {
-    const ordered = highlights.sort((a, b) =>
-        fromId(a.anchorId)[1] - fromId(b.anchorId)[1]
-    );
+    const ordered = highlights.sort((a, b) => fromId(a.anchorId)[1] - fromId(b.anchorId)[1]);
 
     return (
         <>

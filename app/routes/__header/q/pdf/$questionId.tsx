@@ -241,7 +241,7 @@ export default function() {
         score,
         content,
         page,
-        document: { url, shortId: docShortId },
+        document: { shortId: docShortId },
         rects,
         excerptRect,
         user: { image, shortId: userId, displayName },
@@ -250,8 +250,6 @@ export default function() {
     } = data;
 
     const createdDate = new Date(createdAt);
-
-    console.log(vote);
 
     return (
         <>
@@ -276,7 +274,7 @@ export default function() {
                             className="w-full"
                             pageRects={{ rects, outline: excerptRect }}
                             page={page}
-                            url={url}
+                            url={`/storage/${docShortId}`}
                         />
                         <div className="mt-2">{content}</div>
                         <div className="flex flex-row w-full mt-4">

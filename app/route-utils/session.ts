@@ -1,4 +1,4 @@
-import type { Session } from "remix";
+import { Session } from "@remix-run/node";
 import invariant from "tiny-invariant";
 import { sessionStorage, UserSession } from "~/server/auth.server";
 

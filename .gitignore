@@ -6,6 +6,9 @@ dbschema/edgeql-js
 /public/build
 .env
 
+storage
+!storage/.gitkeep
+
 tsconfig.tsbuildinfo
 
 SECRETS.md

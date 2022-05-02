@@ -4,11 +4,7 @@ import { SocialsProvider } from "remix-auth-socials";
 import invariant from "tiny-invariant";
 import { Form, json, LoaderFunction, redirect, useLoaderData } from "~/mod";
 import { getSession, setSessionHeader } from "~/route-utils/session";
-import {
-    authenticator,
-    SESSION_REDIRECT_KEY,
-    sessionStorage,
-} from "~/server/auth.server";
+import { authenticator, SESSION_REDIRECT_KEY, sessionStorage } from "~/server/auth.server";
 
 type LoaderData = {
     error: { message: string } | null;

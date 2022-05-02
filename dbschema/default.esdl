@@ -13,6 +13,7 @@ module default {
 	# for now all clubs are public
 	type Club {
 		required property name -> str;
+		required property description -> str;
 		# for now: this will always be true
 		required property shortId -> str {
 			constraint exclusive;
@@ -28,13 +29,13 @@ module default {
 		required property shortId -> str {
 			constraint exclusive;
 		}
+		required property storageHandle -> str;
 		required link club -> Club;
 		# A club should not have 2 documents with the same name
 		constraint exclusive on ( (.club, .name) );
 	}
 
 	type PDF extending Document {
-		required property url -> str;
 		multi link posts := .<document[is PDFPost];
 		required property baseWidth -> int16;
 		required property baseHeight -> int16;

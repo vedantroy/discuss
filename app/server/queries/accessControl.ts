@@ -37,12 +37,15 @@ export async function clubFromDoc(
     return r?.club || null;
 }
 
+// I need to fix the types here
 export async function canEditDocument(
     docId: ShortDocumentID,
     userId?: ShortUserID,
-): Promise<Club | null> {
+    { storageHandle }: { storageHandle: boolean } = { storageHandle: false },
+): Promise<Club & { storageHandle?: string } | null> {
     if (!userId) {
         const q = e.select(e.Document, doc => ({
+            storageHandle,
             club: {
                 shortId: true,
                 name: true,
@@ -54,7 +57,8 @@ export async function canEditDocument(
             ),
             limit: 1,
         }));
-        return (await q.run(db))?.club || null;
+        const r = await q.run(db);
+        return r ? { ...r.club, storageHandle: r.storageHandle } : null;
     }
 
     const q = e.select(e.Document, doc => {
@@ -66,6 +70,7 @@ export async function canEditDocument(
         const userIsAdmin = e.op(doc.club.accessPolicy.admins.shortId, "=", userId);
 
         return {
+            storageHandle,
             club: {
                 shortId: true,
                 name: true,
@@ -82,5 +87,7 @@ export async function canEditDocument(
             limit: 1,
         };
     });
-    return (await q.run(db)).club || null;
+
+    const r = await q.run(db);
+    return r ? { ...r.club, storageHandle: r.storageHandle } : null;
 }

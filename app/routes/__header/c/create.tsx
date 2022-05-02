@@ -1,20 +1,32 @@
-import { useSubmit } from "@remix-run/react";
+import {
+    unstable_createMemoryUploadHandler,
+    unstable_parseMultipartFormData,
+} from "@remix-run/node";
+import { useTransition } from "@remix-run/react";
 import { withZod } from "@remix-validated-form/with-zod";
+import clsx from "clsx";
+import { DataUnit } from "digital-unit-converter";
+import _ from "lodash";
 import React, { useState } from "react";
 import { ValidatedForm, validationError } from "remix-validated-form";
+import invariant from "tiny-invariant";
 import * as zod from "zod";
 import { zfd } from "zod-form-data";
 import FileDropper from "~/components/FileDropper";
-import { Col } from "~/components/primitives/layout";
 import ValidatedInput from "~/components/primitives/validatedInput";
 import ValidatedTextarea from "~/components/primitives/validatedTextarea";
-import { ActionFunction, redirect } from "~/mod";
-import { isLoggedIn } from "~/route-utils/session";
-import { authenticator } from "~/server/auth.server";
+import { ActionFunction, redirect, useSubmit } from "~/mod";
+import { assertLoggedIn } from "~/route-utils/response";
+import { createClub, createDocs } from "~/server/queries/c/create";
+import storage from "~/server/storage";
 
 const INPUT_NAME = "Name";
 const INPUT_DESCRIPTION = "Description";
 const INPUT_FILES = "Files";
+
+const MAX_FILE_SIZE_BYTES = DataUnit.MEGABYTE.toBytes(5);
+const MAX_FILE_SIZE_MB = DataUnit.BYTE.toMegabytes(MAX_FILE_SIZE_BYTES);
+const isPDF = (x: File) => x.type === "application/pdf";
 
 const baseSchema = zod.object({
     [INPUT_NAME]: zfd.text(zod.string().min(5).max(50)),
@@ -22,44 +34,83 @@ const baseSchema = zod.object({
 });
 
 const serverValidator = withZod(baseSchema.and(zod.object({
-    [INPUT_FILES]: zod.array(zod.string()),
+    [INPUT_FILES]: zod.array(
+        zfd.file().refine(isPDF),
+        { required_error: "Club must have at least 1 file" },
+    ),
 })));
-const clientValidator = withZod(baseSchema.and(zod.object({
-    [INPUT_FILES]: zod.preprocess(val => {
-        console.log(Array.isArray(val));
-        console.log(val);
-        return val;
-    }, zod.array(zfd.file())),
-})));
+const clientValidator = withZod(baseSchema);
 
 export const action: ActionFunction = async ({ request, params }) => {
-    const userData = await authenticator.isAuthenticated(request);
-    const user = isLoggedIn(userData);
-    if (!user) {
-        return new Response("Unauthorized", { status: 401 });
+    const user = await assertLoggedIn(request);
+    // memory is bad if people are uploading tons of files @ same time
+    // but that is unlikely for a while ...
+    const handler = unstable_createMemoryUploadHandler({
+        maxFileSize: MAX_FILE_SIZE_BYTES,
+    });
+
+    let formData: FormData;
+    try {
+        formData = await unstable_parseMultipartFormData(
+            request,
+            handler,
+        );
+    } catch (e: any) {
+        // We can't use MeterError from remix
+        if (e.message && e.message.includes("exceeded upload size")) {
+            return validationError({ fieldErrors: { [INPUT_FILES]: e.message } });
+        }
+        // unknown error
+        throw e;
     }
 
-    const fieldValues = await serverValidator.validate(await request.formData());
+    const fieldValues = await serverValidator.validate(formData);
     if (fieldValues.error) return validationError(fieldValues.error);
 
-    const files = fieldValues.data[INPUT_FILES];
-    console.log(files);
+    const { data } = fieldValues;
+    const name = data[INPUT_NAME];
+    const description = data[INPUT_NAME];
+
+    const storedDocs = await Promise.all(data[INPUT_FILES].map(async f => {
+        const buf = Buffer.from(await f.arrayBuffer());
+        invariant(f.type === "application/pdf");
+        const docId = await storage.createFile(buf);
+        // const doc = await pdfjs.getDocument(buf).promise;
+        // const proxy = await doc.getPage(1);
+        // const { width, height } = proxy.getViewport();
+        const width = 0;
+        const height = 0;
+        return { docId, name: f.name, type: f.type, buf, width, height };
+    }));
+
+    const clubId = await createClub({
+        isPublic: true,
+        creatorId: user.shortId,
+        name,
+        description,
+    });
+    await createDocs({ clubId, docs: storedDocs });
+    return redirect(`/c/${clubId}`);
 };
 
 export default function() {
     const [files, setFiles] = useState<File[]>([]);
     const submit = useSubmit();
+    const transition = useTransition();
+    const notIdle = transition.state !== "idle";
 
     return (
         <div className="bg-gray-100 flex-1 z-0">
             <ValidatedForm
-                encType="multipart/form-data"
                 onSubmit={(d, e: React.FormEvent) => {
+                    e.preventDefault();
                     const formData = new FormData();
                     formData.set(INPUT_DESCRIPTION, d.Description);
                     formData.set(INPUT_NAME, d.Name);
-                    for (const [idx, file] of files.entries()) {
-                        formData.set(`${INPUT_FILES}[${idx}]`, file);
+                    if (files) {
+                        for (const [idx, file] of files.entries()) {
+                            formData.set(`${INPUT_FILES}[${idx}]`, file);
+                        }
                     }
                     submit(formData, { method: "post", encType: "multipart/form-data" });
                 }}
@@ -78,21 +129,36 @@ export default function() {
                         className="w-full h-32 mt-1"
                     />
                     <div className="text-lg">Add Files</div>
-                    <FileDropper onFiles={setFiles} name={INPUT_FILES} />
+                    <FileDropper
+                        checks={{
+                            [`larger than ${MAX_FILE_SIZE_MB}mb`]: f =>
+                                f.size > MAX_FILE_SIZE_BYTES,
+                            [`not pdf`]: f => !isPDF(f),
+                        }}
+                        onFiles={(newFiles) => setFiles([...(files || []), ...newFiles])}
+                        name={INPUT_FILES}
+                    />
                     <div className="text-lg mt-3">Files</div>
-                    <Col>
-                        <ul>
-                            {files.map((file) => (
-                                <li key={file.name} className="text-sm">{file.name}</li>
-                            ))}
-                        </ul>
-                    </Col>
-                    <button className="btn btn-primary mt-2">Submit</button>
+                    {files.length > 0
+                        ? (
+                            <ul>
+                                {files.map((file) => (
+                                    <li key={file.name} className="text-sm">
+                                        {file.name}
+                                    </li>
+                                ))}
+                            </ul>
+                        )
+                        : <div className="text-sm">No files selected</div>}
+                    <button
+                        type="submit"
+                        disabled={notIdle}
+                        className={clsx("btn btn-primary mt-2", { "loading": notIdle })}
+                    >
+                        Submit
+                    </button>
                 </div>
             </ValidatedForm>
         </div>
     );
 }
-
-// Going to use a terrible text-area for now -- no markdown support @ all!
-// want to ship an MPV to brian; how sexy the markdown will not matter for that

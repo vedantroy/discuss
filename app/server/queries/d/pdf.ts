@@ -35,7 +35,6 @@ export async function getPDFAndClub(
 ): Promise<ClubResource<DocumentPayload<PDFContext>>> {
     const query = e.select(e.Document, doc => ({
         club: {
-            public: true,
             shortId: true,
             name: true,
         },
@@ -50,9 +49,9 @@ export async function getPDFAndClub(
     }
 
     const { name: docName, club } = r;
-    if (!club.public) {
-        throw new Error(`private clubs not implemented yet`);
-    }
+    // if (!club.public) {
+    //    throw new Error(`private clubs not implemented yet`);
+    // }
 
     // if (r.__type__.name === "PDF") {
     // } else {

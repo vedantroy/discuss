@@ -1,13 +1,7 @@
 export * from "./getenv";
 export * from "./types";
 
-import {
-    getEnv,
-    getEnvBoolean,
-    getEnvFloat,
-    getEnvInteger,
-    getEnvString,
-} from "./getenv";
+import { getEnv, getEnvBoolean, getEnvFloat, getEnvInteger, getEnvString } from "./getenv";
 import { GetEnvInterface } from "./types";
 
 // Remap to exported name.

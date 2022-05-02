@@ -57,10 +57,13 @@ const HeaderWithAction = (
     : <Header className={HEADER_POS}>{children}</Header>;
 
 const AddButton = ({ className }: { className?: string }) => (
-    <button className={clsx("btn btn-sm gap-2 btn-success", className)}>
+    <Link
+        to={`/c/create`}
+        className={clsx("btn btn-sm gap-2 btn-success", className)}
+    >
         <FaPlus />
         Create
-    </button>
+    </Link>
 );
 
 const JoinLink = ({ className }: { className?: string }) => (

@@ -1,7 +1,4 @@
-import type {
-    PDFDocumentProxy,
-    PDFPageProxy,
-} from "pdfjs-dist/types/src/display/api";
+import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist/types/src/display/api";
 import type { PageViewport } from "pdfjs-dist/types/src/display/display_utils";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { pdfjs } from "~/mod";
@@ -140,9 +137,7 @@ function Viewer(
             if (viewport) setViewport(viewport);
             if (Array.isArray(states)) {
                 setPageStates(
-                    states.map(x =>
-                        x === PageState.RENDER_DONE ? RenderState.RENDER : x
-                    ),
+                    states.map(x => x === PageState.RENDER_DONE ? RenderState.RENDER : x),
                 );
             }
         },
@@ -239,8 +234,7 @@ function Viewer(
                 }
                 return (
                     <Page
-                        onActiveHighlights={highlights =>
-                            setActiveHighlights(highlights)}
+                        onActiveHighlights={highlights => setActiveHighlights(highlights)}
                         highlights={highlights}
                         linkedHighlightIds={linkedHighlightIds}
                         // TODO: Should we add this to the useMemo?
