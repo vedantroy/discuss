@@ -89,7 +89,7 @@ export default function dash() {
                     ? (
                         <Col className="gap-y-2">
                             {admin.map(c => (
-                                <Link to={`/c/${c.shortId}`}>
+                                <Link key={c.shortId} to={`/c/${c.shortId}`}>
                                     <Col className="h-6 box-border px-2 items-center bg-zinc-200 cursor-pointer shadow shadow-zinc-400 hover:shadow-md hover:shadow-zinc-500 transition-shadow">
                                         {c.name}
                                     </Col>

@@ -12,6 +12,8 @@ import getenv from "~/vendor/getenv.ts";
 import { getUserFromGoogleIdentity } from "./db/queries/auth";
 
 const COOKIE_SECRET = getenv.string("COOKIE_SECRET");
+const MODE = getenv.string("NODE_ENV");
+const isProduction = MODE === "production";
 
 export const sessionStorage = createCookieSessionStorage({
     cookie: {
@@ -69,12 +71,15 @@ export type UserSession = {
     };
 };
 
+const GoogleDevURL = `http://localhost:3000/auth/${SocialsProvider.GOOGLE}/callback`;
+const GoogleProdURL = `https://chimu.sh/auth/${SocialsProvider.GOOGLE}/callback`;
+
 export const authenticator = new Authenticator<UserSession>(sessionStorage);
 authenticator.use(
     new GoogleStrategy({
         clientID: GOOGLE_CLIENT_ID,
         clientSecret: GOOGLE_CLIENT_SECRET,
-        callbackURL: `http://localhost:3000/auth/${SocialsProvider.GOOGLE}/callback`,
+        callbackURL: isProduction ? GoogleProdURL : GoogleDevURL,
     }, async (oauth) => {
         const user = await getUserFromGoogleIdentity(oauth.profile._json.sub);
         if (!user) {

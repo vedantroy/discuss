@@ -276,7 +276,7 @@ export default function() {
                             className="w-full"
                             pageRects={{ rects, outline: excerptRect }}
                             page={page}
-                            url={`/storage/${docShortId}`}
+                            url={`/storage/pdf/${docShortId}`}
                         />
                         <div className="mt-2">{content}</div>
                         <div className="flex flex-row w-full mt-4">

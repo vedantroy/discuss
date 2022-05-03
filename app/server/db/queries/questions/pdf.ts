@@ -10,7 +10,6 @@ import {
     ClubPreview,
     ClubResource,
     ObjectStatusCode,
-    ShortClubID,
     ShortQuestionID,
     ShortUserID,
     UserPreview,

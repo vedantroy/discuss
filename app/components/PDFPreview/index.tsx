@@ -138,6 +138,7 @@ export default function PreviewViewer(
 ) {
     const divRef = useRef<HTMLDivElement | null>(null);
     const { width, height } = useContainerDimensions(divRef);
+    console.log("PREVIEW GETTING PAGE AT: " + url);
     const doc = usePDFDoc(url);
     const [pageProxy, setPageProxy] = useState<PDFPageProxy | null>(null);
 

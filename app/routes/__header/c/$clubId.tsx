@@ -53,7 +53,10 @@ export const action: ActionFunction = async ({ request, params }) => {
 export const loader: LoaderFunction = async ({ request, params }) => {
     const clubId = getParam(params, "clubId") as ShortClubID;
     const club = await getClubIfViewable(clubId, undefined);
-    return json(club);
+    if (club.type !== ObjectStatusCode.VALID) {
+        throw new Response(`club issue: ${club.type}`);
+    }
+    return json(club.payload);
 };
 
 const Box = ({ name }: { name: string }) => (
@@ -127,7 +130,8 @@ const UploadButton = (
 };
 
 export default function() {
-    const { name, documents } = useLoaderData<ClubWithDocuments>();
+    const data = useLoaderData<ClubWithDocuments>();
+    const { name, documents } = data;
     const noDocs = documents.length === 0;
 
     const fetcher = useFetcher();
@@ -144,7 +148,7 @@ export default function() {
                 : (
                     <Col className="gap-y-4">
                         {documents.map(doc => (
-                            <Link to={`/d/pdf/${doc.shortId}`}>
+                            <Link key={doc.shortId} to={`/d/pdf/${doc.shortId}`}>
                                 <Box name={doc.name}></Box>
                             </Link>
                         ))}
