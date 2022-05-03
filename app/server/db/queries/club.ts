@@ -9,7 +9,6 @@ import {
     ShortDocumentID,
     ShortUserID,
 } from "~/server/model/types";
-import { StoredDocumentID } from "~/server/storage/types";
 import db, { e } from "../edgedb.server";
 import { accessControlSelector } from "./utils/selectors";
 

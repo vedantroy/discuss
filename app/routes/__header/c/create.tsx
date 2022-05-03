@@ -20,7 +20,6 @@ import { assertLoggedIn } from "~/route-utils/response";
 import { createClub } from "~/server/db/queries/club";
 import { createDocs } from "~/server/db/queries/doc";
 import storage from "~/server/storage";
-import dash from "../dash";
 
 const INPUT_NAME = "Name";
 const INPUT_DESCRIPTION = "Description";
@@ -31,7 +30,7 @@ const MAX_FILE_SIZE_MB = DataUnit.BYTE.toMegabytes(MAX_FILE_SIZE_BYTES);
 const isPDF = (x: File) => x.type === "application/pdf";
 
 const baseSchema = zod.object({
-    [INPUT_NAME]: zfd.text(zod.string().min(5).max(50)),
+    [INPUT_NAME]: zfd.text(zod.string().min(5).max(30)),
     [INPUT_DESCRIPTION]: zfd.text(zod.string().min(10).max(500)),
 });
 
@@ -70,7 +69,7 @@ export const action: ActionFunction = async ({ request, params }) => {
 
     const { data } = fieldValues;
     const name = data[INPUT_NAME];
-    const description = data[INPUT_NAME];
+    const description = data[INPUT_DESCRIPTION];
 
     const storedDocs = await Promise.all(data[INPUT_FILES].map(async f => {
         const buf = Buffer.from(await f.arrayBuffer());

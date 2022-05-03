@@ -7,6 +7,7 @@ import { redirectToLogin } from "~/route-utils/response";
 import { isLoggedIn } from "~/route-utils/session";
 import { authenticator } from "~/server/auth.server";
 import { getClubsForUser, UserClubs } from "~/server/db/queries/user";
+import { ShortClubID } from "~/server/model/types";
 
 // priority: ship
 // meta lesson: if the site gets big I'm hiring a pro UI designer
@@ -32,7 +33,6 @@ export const loader: LoaderFunction = async ({ request, params }) => {
 const Header = (
     { children, className }: { children: React.ReactNode; className?: string },
 ) => (
-    // TODO: Use cslx
     <h2 className={clsx("text-3xl", className)}>
         {children}
     </h2>
@@ -73,6 +73,25 @@ const JoinLink = ({ className }: { className?: string }) => (
     </Link>
 );
 
+const ClubCard = (
+    { name, shortId, description }: {
+        name: string;
+        description: string;
+        shortId: ShortClubID;
+    },
+) => (
+    <Link to={`/c/${shortId}`}>
+        <div
+            className={`h-28 min-w-28 p-2 cursor-pointer rounded bg-gray-100 hover:bg-gray-200 transition-shadow duration-75 shadow shadow-gray-400 hover:shadow-md hover:shadow-gray-500`}
+        >
+            <h3 className="w-full text-center text-lg font-semibold mb-2">{name}</h3>
+            <div>
+                <p className="max-h-24 text-ellipses text-gray-800">{description}</p>
+            </div>
+        </div>
+    </Link>
+);
+
 export default function dash() {
     const { clubs: { admin, writer } } = useLoaderData<LoaderData>();
     const hasAdminClubs = admin.length > 0;
@@ -87,15 +106,17 @@ export default function dash() {
                 </HeaderWithAction>
                 {hasAdminClubs
                     ? (
-                        <Col className="gap-y-2">
+                        // TODO: fix grid styling ...
+                        <div className="grid grid-cols-2 p-4 gap-4 w-full">
                             {admin.map(c => (
-                                <Link key={c.shortId} to={`/c/${c.shortId}`}>
-                                    <Col className="h-6 box-border px-2 items-center bg-zinc-200 cursor-pointer shadow shadow-zinc-400 hover:shadow-md hover:shadow-zinc-500 transition-shadow">
-                                        {c.name}
-                                    </Col>
-                                </Link>
+                                <ClubCard
+                                    key={c.shortId}
+                                    name={c.name}
+                                    description={c.description}
+                                    shortId={c.shortId}
+                                />
                             ))}
-                        </Col>
+                        </div>
                     )
                     : (
                         <div>

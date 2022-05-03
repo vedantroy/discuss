@@ -34,7 +34,7 @@ export const loader: LoaderFunction = async ({ request, params }) => {
             });
         } else {
             // No redirect was set, so redirect to base page
-            return redirect(`/`);
+            return redirect(`/dash`);
         }
     }
 
