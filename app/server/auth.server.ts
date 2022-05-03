@@ -10,10 +10,9 @@ import { createCookieSessionStorage } from "~/mod";
 import { ShortUserID } from "~/server/model/types";
 import getenv from "~/vendor/getenv.ts";
 import { getUserFromGoogleIdentity } from "./db/queries/auth";
+import { IS_PRODUCTION } from "./env";
 
 const COOKIE_SECRET = getenv.string("COOKIE_SECRET");
-const MODE = getenv.string("NODE_ENV");
-const isProduction = MODE === "production";
 
 export const sessionStorage = createCookieSessionStorage({
     cookie: {
@@ -79,7 +78,7 @@ authenticator.use(
     new GoogleStrategy({
         clientID: GOOGLE_CLIENT_ID,
         clientSecret: GOOGLE_CLIENT_SECRET,
-        callbackURL: isProduction ? GoogleProdURL : GoogleDevURL,
+        callbackURL: IS_PRODUCTION ? GoogleProdURL : GoogleDevURL,
     }, async (oauth) => {
         const user = await getUserFromGoogleIdentity(oauth.profile._json.sub);
         if (!user) {

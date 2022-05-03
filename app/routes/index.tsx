@@ -1,10 +1,15 @@
-import { useLoaderData } from "@remix-run/react";
+import { Link, useLoaderData } from "@remix-run/react";
 import { FaBookReader } from "react-icons/fa";
 import { Col, Row } from "~/components/primitives/layout";
+import type { LinksFunction } from "~/mod";
 import { json, LoaderFunction } from "~/mod";
 import { isLoggedIn } from "~/route-utils/session";
 import { authenticator } from "~/server/auth.server";
-// import { getClubsForUser, UserClubs } from "~/server/queries";
+import INDEX_CSS from "~/styles/index.css";
+
+export const links: LinksFunction = () => {
+    return [{ href: INDEX_CSS, rel: "stylesheet" }];
+};
 
 type LoaderData =
     | { loggedIn: true; clubs: any }
@@ -20,9 +25,20 @@ export const loader: LoaderFunction = async ({ request, params }) => {
     // return json({ loggedIn: true, clubs: await getClubsForUser(user.shortId) });
 };
 
+const ImageItem = ({ src, children }: { src: string; children: React.ReactNode }) => (
+    <Col className="max-w-[400px]">
+        <div className="w-full text-center text-gray-700 mb-1">{children}</div>
+        <img
+            className="shadow-lg shadow-gray-400 max-h-[360px]"
+            src={src}
+            width={400}
+        />
+    </Col>
+);
+
 export default function() {
     return (
-        <>
+        <Col className="h-full">
             <Col className="w-full py-16 px-4 bg-violet-800 items-center">
                 <Col>
                     <Row className="text-3xl text-white mb-8 font-medium">
@@ -35,12 +51,33 @@ export default function() {
                     <div className="text-white text-2xl">
                         A collaborative e-reader combined with a Q&A forum. For any PDF.
                     </div>
+                    <Row className="mt-8 gap-x-4">
+                        <Link
+                            className="btn bg-cyan-500 border-cyan-500 hover:bg-cyan-600 hover:border-cyan-600"
+                            to={"/dash"}
+                        >
+                            Get Started
+                        </Link>
+                        <button className="btn" onClick={() => alert("Coming soon!")}>
+                            View Example
+                        </button>
+                    </Row>
                 </Col>
             </Col>
-            <Col className="w-full h-50 bg-gray-100 items-center pt-8">
+            <Col className="flex-1 w-full bg-gray-100 items-center py-8 px-2">
                 <h2 className="text-3xl font-semibold mb-8">Access others' knowledge</h2>
-                <div></div>
+                <div className="w-full flex flex-col items-center gap-y-8 xl:flex-row xl:justify-center xl:gap-x-12">
+                    <ImageItem src="/image/landing/1.png">
+                        Read and see the highlights of other people
+                    </ImageItem>
+                    <ImageItem src="/image/landing/2.png">
+                        Post by highlighting text and pressing <b>p</b>
+                    </ImageItem>
+                    <ImageItem src="/image/landing/3.png">
+                        Get answers from other people on the forum
+                    </ImageItem>
+                </div>
             </Col>
-        </>
+        </Col>
     );
 }

@@ -1,6 +1,7 @@
 import * as edgedb from "edgedb";
 import e from "~/../dbschema/edgeql-js";
 import getenv from "~/vendor/getenv.ts/index";
+import { IS_PRODUCTION } from "../env";
 
 let db: edgedb.Client;
 
@@ -8,8 +9,7 @@ declare global {
     var __db: edgedb.Client | undefined;
 }
 
-const production = process.env.NODE_ENV === "production";
-if (production) {
+if (IS_PRODUCTION) {
     const EDGEDB_PORT = getenv.int("EDGEDB_PORT");
     const EDGEDB_PASSWORD = getenv.string("EDGEDB_PASSWORD");
     const EDGEDB_HOST = getenv.string("EDGEDB_HOST");
