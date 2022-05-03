@@ -7,6 +7,7 @@ module default {
 	type AccessPolicy {
 		required property public -> bool;
 		multi link writers -> User;
+		# this should 
 		multi link admins -> User;
 	}
 

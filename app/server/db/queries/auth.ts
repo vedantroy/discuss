@@ -1,6 +1,5 @@
 import { nanoid } from "nanoid";
-import db, { e } from "~/server/edgedb.server";
-import { ShortUserID } from "./common";
+import db, { e } from "~/server/db/edgedb.server";
 
 export type CreateUser = {
     displayName: string;

@@ -1,5 +1,4 @@
-import { e } from "~/server/edgedb.server";
-import { runQuery, ShortUserID, userFromId } from "../common";
+import { e } from "~/server/db/edgedb.server";
 
 // Use ids instead of short ids b/c only posts have short ids (as of now)
 // TODO: Transition to useing ids in all DB queries -- short ids should only be

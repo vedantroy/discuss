@@ -47,14 +47,14 @@ export default function Index() {
     }));
 
     console.log(data.docCtx);
-    const { url, width, height } = data.docCtx;
+    const { width, height } = data.docCtx;
     return (
         <Viewer
             width={width}
             height={height}
             docId={docId}
             highlights={highlights}
-            url={url}
+            url={`/storage/pdf/${docId}`}
         />
     );
 }

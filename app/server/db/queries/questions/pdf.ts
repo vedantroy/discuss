@@ -4,18 +4,28 @@ import {
     PDFRect as DBPDFRect,
     Vote as DBVote,
 } from "dbschema/edgeql-js";
-import db, { e } from "~/server/edgedb.server";
+import db, { e } from "~/server/db/edgedb.server";
+import { AccessPolicy, getAuthStatus } from "~/server/model/accessControl";
 import {
-    canAccessClub,
-    ClubPreview,
     ClubResource,
     ObjectStatusCode,
     ShortClubID,
     ShortQuestionID,
     ShortUserID,
-    userFromId,
-    UserPreview,
-} from "../common";
+} from "~/server/model/types";
+import { canAccessClub, ClubPreview, UserPreview } from "~/server/queries/common";
+import { accessControlSelector } from "../utils/selectors";
+// import {
+//    canAccessClub,
+//    ClubPreview,
+//    ClubResource,
+//    ObjectStatusCode,
+//    ShortClubID,
+//    ShortQuestionID,
+//    ShortUserID,
+//    userFromId,
+//    UserPreview,
+// } from "../common";
 
 export type PDFRect = Pick<DBPDFRect, "height" | "width" | "x" | "y">;
 export type MyVote = Pick<DBVote, "up">;
@@ -95,8 +105,7 @@ export async function getPDFQuestion(
             shortId: true,
             club: {
                 name: true,
-                public: true,
-
+                accessPolicy: accessControlSelector,
                 shortId: true,
             },
         },
@@ -116,13 +125,14 @@ export async function getPDFQuestion(
         return { type: ObjectStatusCode.MISSING };
     }
     const shortId = r.document.club.shortId as ShortClubID;
-    const isPublic = r.document.club.public;
-    canAccessClub({ shortId, isPublic }, userId);
+    const auth = getAuthStatus(r.document.club.accessPolicy as AccessPolicy, userId);
+    if (auth.type !== ObjectStatusCode.VALID) return auth;
 
     const { votes, ...rest } = r;
 
     return {
         type: ObjectStatusCode.VALID,
+        callerAccess: auth.callerAccess,
         payload: {
             ...rest,
             createdAt: r.createdAt.toISOString(),
@@ -135,23 +145,4 @@ export async function getPDFQuestion(
             vote: (r.votes || [])[0],
         },
     };
-}
-
-type SubmitAnswer = {
-    userId: ShortUserID;
-    questionId: ShortQuestionID;
-    content: string;
-};
-
-export async function submitAnswer({ userId, questionId, content }: SubmitAnswer) {
-    const query = e.insert(e.Answer, {
-        user: userFromId(userId),
-        post: e.select(e.Post, post => ({
-            limit: 1,
-            filter: e.op(post.shortId, "=", questionId),
-        })),
-        content,
-        createdAt: e.datetime_of_transaction(),
-    });
-    await query.run(db);
 }

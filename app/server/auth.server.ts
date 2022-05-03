@@ -7,9 +7,9 @@ import {
     SocialsProvider,
 } from "remix-auth-socials";
 import { createCookieSessionStorage } from "~/mod";
+import { ShortUserID } from "~/server/model/types";
 import getenv from "~/vendor/getenv.ts";
 import { getUserFromGoogleIdentity } from "./queries/auth";
-import { ShortUserID } from "./queries/common";
 
 const COOKIE_SECRET = getenv.string("COOKIE_SECRET");
 

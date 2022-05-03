@@ -74,9 +74,9 @@ const JoinLink = ({ className }: { className?: string }) => (
 );
 
 export default function dash() {
-    const { clubs } = useLoaderData<LoaderData>();
-    const hasAdminClubs = clubs.admin.length > 0;
-    const hasJoinedClubs = clubs.writer.length > 0;
+    const { clubs: { admin, writer } } = useLoaderData<LoaderData>();
+    const hasAdminClubs = admin.length > 0;
+    const hasJoinedClubs = writer.length > 0;
     return (
         <div className="flex-1">
             <Col className="h-full w-full items-center">
@@ -86,7 +86,17 @@ export default function dash() {
                     My Clubs
                 </HeaderWithAction>
                 {hasAdminClubs
-                    ? <div>Your clubs</div>
+                    ? (
+                        <Col className="gap-y-2">
+                            {admin.map(c => (
+                                <Link to={`/c/${c.shortId}`}>
+                                    <Col className="h-6 box-border px-2 items-center bg-zinc-200 cursor-pointer shadow shadow-zinc-400 hover:shadow-md hover:shadow-zinc-500 transition-shadow">
+                                        {c.name}
+                                    </Col>
+                                </Link>
+                            ))}
+                        </Col>
+                    )
                     : (
                         <div>
                             <span>You have no clubs!</span>

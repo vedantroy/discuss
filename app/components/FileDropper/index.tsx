@@ -4,6 +4,7 @@
 import _ from "lodash";
 import { useRef, useState } from "react";
 import { FileDrop } from "react-file-drop";
+import { useHydrated } from "remix-utils";
 import { useField } from "remix-validated-form";
 import { Col } from "../primitives/layout";
 
@@ -17,6 +18,7 @@ export default function({ name, onFiles, checks }: FileDropperProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { error } = useField(name);
     const [skippedFiles, setSkippedFiles] = useState<Record<string, File[]>>({});
+    const hydrated = useHydrated();
 
     const updateFiles = (newFiles: FileList | null) => {
         // length = 0  if user presses enter w/o doing anything
@@ -44,7 +46,7 @@ export default function({ name, onFiles, checks }: FileDropperProps) {
                 onChange={e => updateFiles(e.target.files)}
             >
             </input>
-            {typeof window !== "undefined" && (
+            {hydrated && (
                 <FileDrop
                     className="relative h-28 w-full bg-zinc-100  border-solid border-zinc-400 rounded border-2 cursor-pointer"
                     targetClassName="w-full h-full absolute flex flex-col items-center justify-center content-center text-center"

@@ -1,6 +1,4 @@
 import * as edgedb from "edgedb";
-import { ConnectConfig } from "edgedb/dist/conUtils";
-import invariant from "tiny-invariant";
 import e from "~/../dbschema/edgeql-js";
 import getenv from "~/vendor/getenv.ts/index";
 
@@ -11,8 +9,6 @@ declare global {
 }
 
 const production = process.env.NODE_ENV === "production";
-
-console.log(`MODE: ${process.env.NODE_ENV}`);
 if (production) {
     const EDGEDB_PORT = getenv.int("EDGEDB_PORT");
     const EDGEDB_PASSWORD = getenv.string("EDGEDB_PASSWORD");
