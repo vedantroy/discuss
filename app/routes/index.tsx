@@ -1,29 +1,30 @@
-import { Link, useLoaderData } from "@remix-run/react";
+import { Link } from "@remix-run/react";
 import { FaBookReader } from "react-icons/fa";
+import { SiDiscord } from "react-icons/si";
 import { Col, Row } from "~/components/primitives/layout";
 import type { LinksFunction } from "~/mod";
-import { json, LoaderFunction } from "~/mod";
-import { isLoggedIn } from "~/route-utils/session";
-import { authenticator } from "~/server/auth.server";
+// import { json, LoaderFunction } from "~/mod";
+// import { isLoggedIn } from "~/route-utils/session";
+// import { authenticator } from "~/server/auth.server";
 import INDEX_CSS from "~/styles/index.css";
 
 export const links: LinksFunction = () => {
     return [{ href: INDEX_CSS, rel: "stylesheet" }];
 };
 
-type LoaderData =
-    | { loggedIn: true; clubs: any }
-    | { loggedIn: false };
-
-export const loader: LoaderFunction = async ({ request, params }) => {
-    const userData = await authenticator.isAuthenticated(request);
-    const user = isLoggedIn(userData);
-    if (!user) {
-        return json({ loggedIn: false });
-    }
-    return json({ loggedIn: true });
-    // return json({ loggedIn: true, clubs: await getClubsForUser(user.shortId) });
-};
+// type LoaderData =
+//     | { loggedIn: true; clubs: any }
+//     | { loggedIn: false };
+//
+// export const loader: LoaderFunction = async ({ request, params }) => {
+//     const userData = await authenticator.isAuthenticated(request);
+//     const user = isLoggedIn(userData);
+//     if (!user) {
+//         return json({ loggedIn: false });
+//     }
+//     return json({ loggedIn: true });
+//     // return json({ loggedIn: true, clubs: await getClubsForUser(user.shortId) });
+// };
 
 const ImageItem = ({ src, children }: { src: string; children: React.ReactNode }) => (
     <Col className="max-w-[400px]">
@@ -41,8 +42,13 @@ export default function() {
         <Col className="h-full">
             <Col className="w-full py-16 px-4 bg-violet-800 items-center">
                 <Col>
-                    <Row className="text-3xl text-white mb-8 font-medium">
-                        <FaBookReader /> <span className="ml-4">Chimu</span>
+                    <Row className="justify-between w-full">
+                        <Row className="text-3xl text-white mb-8 font-medium">
+                            <FaBookReader /> <span className="ml-4">Chimu</span>
+                        </Row>
+                        <a href="https://discord.gg/ns4FeJnYNm">
+                            <SiDiscord color="white" size={25} />
+                        </a>
                     </Row>
                     <h2 className="text-white w-full text-5xl font-semibold mb-8">
                         <span className="text-cyan-200">Learn</span> from books and papers{" "}
