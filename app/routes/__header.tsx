@@ -4,8 +4,8 @@ import { Col, Row } from "~/components/primitives/layout";
 import { json, Link, LoaderFunction, Outlet, useLoaderData } from "~/mod";
 import { isLoggedIn } from "~/route-utils/session";
 import { authenticator } from "~/server/auth.server";
-import { getUserPreview } from "~/server/queries/__header";
-import { UserPreview } from "~/server/queries/common";
+import { getUserPreview } from "~/server/db/queries/user";
+import { UserPreview } from "~/server/model/types";
 
 export const loader: LoaderFunction = async ({ request, params }) => {
     const userData = await authenticator.isAuthenticated(request);

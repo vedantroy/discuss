@@ -5,13 +5,13 @@ import PDF_CSS from "~/components/PDFWindow/PDFViewer/styles/page.css";
 import { json, LoaderFunction, useLoaderData, useParams } from "~/mod";
 import { getParam } from "~/route-utils/params";
 import { authenticator } from "~/server/auth.server";
+import { getPDFWithMetadata, PDFContext } from "~/server/db/queries/docs/pdf";
 import {
     DocumentPayload,
     ObjectStatusCode,
     ShortDocumentID,
     ShortUserID,
-} from "~/server/queries/common";
-import { getPDFAndClub, PDFContext } from "~/server/queries/d/pdf";
+} from "~/server/model/types";
 
 export function links() {
     return [{ rel: "stylesheet", href: PDF_CSS }];
@@ -20,7 +20,7 @@ export function links() {
 export const loader: LoaderFunction = async ({ params, request }) => {
     const docId = getParam(params, "docId");
     const userData = await authenticator.isAuthenticated(request);
-    const doc = await getPDFAndClub(
+    const doc = await getPDFWithMetadata(
         docId as ShortDocumentID,
         userData?.user?.shortId as ShortUserID,
     );

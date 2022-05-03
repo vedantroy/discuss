@@ -47,3 +47,14 @@ export type Club = {
     name: string;
     description: string;
 };
+
+export type UserPreview = {
+    displayName: string;
+    image: string;
+    shortId: ShortUserID;
+};
+
+export type ClubPreview = {
+    shortId: ShortClubID;
+    name: string;
+};

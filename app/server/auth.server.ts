@@ -9,7 +9,7 @@ import {
 import { createCookieSessionStorage } from "~/mod";
 import { ShortUserID } from "~/server/model/types";
 import getenv from "~/vendor/getenv.ts";
-import { getUserFromGoogleIdentity } from "./queries/auth";
+import { getUserFromGoogleIdentity } from "./db/queries/auth";
 
 const COOKIE_SECRET = getenv.string("COOKIE_SECRET");
 

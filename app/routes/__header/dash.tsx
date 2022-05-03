@@ -6,7 +6,7 @@ import { LoaderFunction } from "~/mod";
 import { redirectToLogin } from "~/route-utils/response";
 import { isLoggedIn } from "~/route-utils/session";
 import { authenticator } from "~/server/auth.server";
-import { getClubsForUser, UserClubs } from "~/server/queries/dash";
+import { getClubsForUser, UserClubs } from "~/server/db/queries/user";
 
 // priority: ship
 // meta lesson: if the site gets big I'm hiring a pro UI designer

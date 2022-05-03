@@ -7,25 +7,15 @@ import {
 import db, { e } from "~/server/db/edgedb.server";
 import { AccessPolicy, getAuthStatus } from "~/server/model/accessControl";
 import {
+    ClubPreview,
     ClubResource,
     ObjectStatusCode,
     ShortClubID,
     ShortQuestionID,
     ShortUserID,
+    UserPreview,
 } from "~/server/model/types";
-import { canAccessClub, ClubPreview, UserPreview } from "~/server/queries/common";
 import { accessControlSelector } from "../utils/selectors";
-// import {
-//    canAccessClub,
-//    ClubPreview,
-//    ClubResource,
-//    ObjectStatusCode,
-//    ShortClubID,
-//    ShortQuestionID,
-//    ShortUserID,
-//    userFromId,
-//    UserPreview,
-// } from "../common";
 
 export type PDFRect = Pick<DBPDFRect, "height" | "width" | "x" | "y">;
 export type MyVote = Pick<DBVote, "up">;
@@ -124,25 +114,30 @@ export async function getPDFQuestion(
     if (r === null) {
         return { type: ObjectStatusCode.MISSING };
     }
-    const shortId = r.document.club.shortId as ShortClubID;
+    // const shortId = r.document.club.shortId as ShortClubID;
     const auth = getAuthStatus(r.document.club.accessPolicy as AccessPolicy, userId);
     if (auth.type !== ObjectStatusCode.VALID) return auth;
 
     const { votes, ...rest } = r;
 
+    // @ts-ignore - there is type branding here that I don't want to deal with
+    const casted = {
+        ...rest,
+        createdAt: r.createdAt.toISOString(),
+        shortId: r.shortId as ShortQuestionID,
+        // todo check this out
+        answers: r.answers.map(({ createdAt, votes, ...rest }) => ({
+            // shortId: rest.shortId as ShortUserID,
+            createdAt: createdAt.toISOString(),
+            vote: (votes || [])[0],
+            ...rest,
+        })) as Array<Answer>,
+        vote: (r.votes || [])[0],
+    } as Question;
+
     return {
         type: ObjectStatusCode.VALID,
         callerAccess: auth.callerAccess,
-        payload: {
-            ...rest,
-            createdAt: r.createdAt.toISOString(),
-            shortId: r.shortId as ShortQuestionID,
-            answers: r.answers.map(({ createdAt, votes, ...rest }) => ({
-                createdAt: createdAt.toISOString(),
-                vote: (votes || [])[0],
-                ...rest,
-            })),
-            vote: (r.votes || [])[0],
-        },
+        payload: casted,
     };
 }

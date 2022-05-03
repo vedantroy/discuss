@@ -11,8 +11,8 @@ import { ActionFunction, json, LoaderFunction, redirect, useLoaderData } from "~
 import { getParam } from "~/route-utils/params";
 import { getSession, setSessionHeader } from "~/route-utils/session";
 import { authenticator, UserSession } from "~/server/auth.server";
-import { insertUserWithGoogleIdentity } from "~/server/queries/auth";
-import { ShortUserID } from "~/server/queries/common";
+import { insertUserWithGoogleIdentity } from "~/server/db/queries/auth";
+import { ShortUserID } from "~/server/model/types";
 
 function makeConsecutiveChecker(char: string, n: number, prefix: string) {
     invariant(char.length === 1, `not character: ${char}`);

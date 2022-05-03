@@ -17,8 +17,10 @@ import ValidatedInput from "~/components/primitives/validatedInput";
 import ValidatedTextarea from "~/components/primitives/validatedTextarea";
 import { ActionFunction, redirect, useSubmit } from "~/mod";
 import { assertLoggedIn } from "~/route-utils/response";
-import { createClub, createDocs } from "~/server/queries/c/create";
+import { createClub } from "~/server/db/queries/club";
+import { createDocs } from "~/server/db/queries/doc";
 import storage from "~/server/storage";
+import dash from "../dash";
 
 const INPUT_NAME = "Name";
 const INPUT_DESCRIPTION = "Description";
@@ -48,7 +50,6 @@ export const action: ActionFunction = async ({ request, params }) => {
     const handler = unstable_createMemoryUploadHandler({
         maxFileSize: MAX_FILE_SIZE_BYTES,
     });
-
     let formData: FormData;
     try {
         formData = await unstable_parseMultipartFormData(

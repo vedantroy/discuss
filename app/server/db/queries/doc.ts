@@ -45,32 +45,20 @@ export async function createDocs(
     }));
 }
 
-type DocAuthWithMetadata = {
-    auth: ClubResource<null, unknown>;
-    meta: DocMetadata;
-};
-
-export async function getDocMetadataWithAuth(
+export async function getDocumentAuth(
     docId: ShortDocumentID,
     userId?: ShortUserID,
-): Promise<DocAuthWithMetadata | null> {
-    const query = e.select(e.Document, doc => ({
+): Promise<ClubResource<{ storageHandle: StoredDocumentID }>> {
+    const q = e.select(e.Document, doc => ({
         club: {
-            shortId: true,
-            name: true,
             accessPolicy: accessControlSelector,
         },
-        name: true,
+        storageHandle: true,
         filter: e.op(doc.shortId, "=", docId),
-        limit: 1,
     }));
-
-    const r = await query.run(db);
-    if (r === null) return null;
+    const r = await q.run(db);
+    if (r === null) return { type: ObjectStatusCode.MISSING };
     const auth = getAuthStatus(r.club.accessPolicy as AccessPolicy, userId);
-    const { name, club } = r;
-    return {
-        auth,
-        meta: { docName: name, clubId: club.shortId as ShortClubID, clubName: club.name },
-    };
+    if (auth.type !== ObjectStatusCode.VALID) return auth;
+    return { ...auth, payload: { storageHandle: r.storageHandle as StoredDocumentID } };
 }

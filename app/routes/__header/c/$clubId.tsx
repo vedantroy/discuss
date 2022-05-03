@@ -12,13 +12,9 @@ import { Col, Row } from "~/components/primitives/layout";
 import { Form, json, Link, LoaderFunction, useFetcher, useLoaderData } from "~/mod";
 import { getParam } from "~/route-utils/params";
 import { assertLoggedIn } from "~/route-utils/response";
-import { createDocs } from "~/server/queries/c/create";
-import { ObjectStatusCode, ShortClubID } from "~/server/queries/common";
-import {
-    ClubWithDocuments,
-    getClubAuth,
-    getClubIfViewable,
-} from "~/server/queries/dbv2/queries/club";
+import { ClubWithDocuments, getClubAuth, getClubIfViewable } from "~/server/db/queries/club";
+import { createDocs } from "~/server/db/queries/doc";
+import { ObjectStatusCode, ShortClubID } from "~/server/model/types";
 import storage from "~/server/storage";
 
 export const action: ActionFunction = async ({ request, params }) => {

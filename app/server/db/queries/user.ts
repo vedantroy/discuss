@@ -1,5 +1,5 @@
 import { Club, ShortUserID } from "~/server/model/types";
-import { UserPreview } from "~/server/queries/common";
+import { UserPreview } from "~/server/model/types";
 import db, { e } from "../edgedb.server";
 
 export const getUserPreview = async (
@@ -30,7 +30,6 @@ export async function getClubsForUser(userId: ShortUserID): Promise<UserClubs> {
         filter: e.op(club.accessPolicy.admins.shortId, "=", userId),
     }));
     const userIsAdmin = await q1.run(db);
-
     const q2 = e.select(e.Club, club => ({
         name: true,
         shortId: true,

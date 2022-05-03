@@ -14,8 +14,8 @@ import { ActionFunction, redirect } from "~/mod";
 import { getParam } from "~/route-utils/params";
 import { isLoggedIn } from "~/route-utils/session";
 import { authenticator } from "~/server/auth.server";
-import { ShortDocumentID } from "~/server/queries/common";
-import { createPDFPost } from "~/server/queries/submit/pdf";
+import { createPDFPost } from "~/server/db/queries/docs/pdf";
+import { ShortDocumentID } from "~/server/model/types";
 import SUBMIT_CSS from "~/styles/submit.css";
 
 export function links() {
@@ -64,6 +64,7 @@ export const action: ActionFunction = async ({ request, params }) => {
     const content = data[INPUT_CONTENT];
     // this is untyped for now
     const meta = data[INPUT_META];
+
     const postId = await createPDFPost({
         userId: user.shortId,
         title,

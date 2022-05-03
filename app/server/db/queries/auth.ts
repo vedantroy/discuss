@@ -1,5 +1,6 @@
 import { nanoid } from "nanoid";
 import db, { e } from "~/server/db/edgedb.server";
+import { ShortUserID } from "~/server/model/types";
 
 export type CreateUser = {
     displayName: string;
