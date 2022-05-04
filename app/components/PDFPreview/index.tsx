@@ -68,11 +68,6 @@ function Page({ pageRects, page, containerWidth }: PageProps) {
 
         const renderSource = prevSrcW.w !== srcW || firstRender.current;
         firstRender.current = false;
-        console.log({
-            sourceSizeChanged: renderSource,
-            prevW: prevSrcW.w,
-            curW: vp.width,
-        });
         prevSrcW.w = srcW;
 
         let task: RenderTask | null = null;
