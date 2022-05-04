@@ -1,4 +1,4 @@
-import type { PDFPageProxy } from "pdfjs-dist/types/src/display/api";
+import type { PDFPageProxy, RenderTask } from "pdfjs-dist/types/src/display/api";
 import { useEffect, useRef, useState } from "react";
 import invariant from "tiny-invariant";
 import { Link } from "~/mod";
@@ -31,7 +31,8 @@ type PageProps = {
 // does not cause the canvas to re-shrink but that's beyond current scope
 function Page({ pageRects, page, containerWidth }: PageProps) {
     const sourceCanvasRef = useRef<HTMLCanvasElement | null>(null);
-    const destCanvasRef = useRef<HTMLCanvasElement | null>(null);
+    // const destCanvasRef = useRef<HTMLCanvasElement | null>(null);
+    const [imgData, setImgData] = useState<string | null>(null);
 
     const [rects, setRects] = useState<Rect[] | null>(null);
 
@@ -51,81 +52,87 @@ function Page({ pageRects, page, containerWidth }: PageProps) {
     const vp = page.getViewport({ scale: scaleMultiplier });
     const { width: srcW, height: srcH } = vp;
 
+    const firstRender = useRef(true);
+    const prevVpWidth = useRef({ w: srcW }).current;
+
     // The position of the sample in the source canvas
     const srcTop = scale(top);
     const srcLeft = scale(left);
 
     useEffect(() => {
-        if (sourceCanvasRef) {
-            let cancel = false;
-            console.log("rendering canvas ...");
+        // const logGroupId = randIntBetween(0, 100);
+        const { current: canvas } = sourceCanvasRef;
+        if (!canvas) return;
+        let cancel = false;
 
-            const { current: canvas } = sourceCanvasRef;
-            invariant(canvas, `invalid canvas`);
-            const ctx = canvas.getContext("2d");
-            invariant(ctx, `invalid canvas context`);
-            const task = page.render({
-                viewport: vp,
-                canvasContext: ctx,
-            });
-            const go = async () => {
+        const renderSource = prevVpWidth.w !== vp.width || firstRender.current;
+        firstRender.current = false;
+        console.log({ sourceSizeChanged: renderSource, prevW: prevVpWidth.w, curW: vp.width });
+        prevVpWidth.w = vp.width;
+
+        let task: RenderTask | null = null;
+        async function go() {
+            if (cancel) return;
+            if (renderSource) {
+                invariant(canvas, `invalid canvas`);
+                const srcCtx = canvas.getContext("2d");
+                invariant(srcCtx, `invalid canvas context`);
+                invariant(canvas, `invalid canvas`);
+                task = page.render({
+                    viewport: vp,
+                    canvasContext: srcCtx,
+                });
                 await task.promise;
-                if (cancel) return;
+            }
+            if (cancel) return;
 
-                const newRects = highlightRects.map(({ x, y, width, height }) => ({
-                    x: scale(x) - scale(left),
-                    y: scale(y) - scale(top),
-                    width: scale(width),
-                    height: scale(height),
-                }));
+            const newRects = highlightRects.map(({ x, y, width, height }) => ({
+                x: scale(x) - scale(left),
+                y: scale(y) - scale(top),
+                width: scale(width),
+                height: scale(height),
+            }));
+            setRects(newRects);
 
-                setRects(newRects);
-
-                const { current } = destCanvasRef;
-                const ctx = current!!.getContext("2d");
-                ctx!!.drawImage(
-                    canvas,
-                    // sx
-                    srcLeft,
-                    // sy
-                    srcTop,
-                    // sw -- always take the full width of the container
-                    containerWidth,
-                    // sh
-                    destH,
-                    // dx
-                    0,
-                    // dy
-                    0,
-                    // dw
-                    containerWidth,
-                    // destW,
-                    // dh
-                    destH,
-                );
-            };
-            go();
-
-            return () => {
-                cancel = true;
-                task.cancel();
-            };
+            const buffer = document.createElement("canvas");
+            const bufferCtx = buffer.getContext("2d");
+            invariant(bufferCtx, `invalid canvas context`);
+            buffer.width = containerWidth;
+            buffer.height = destH;
+            bufferCtx.drawImage(
+                canvas!!,
+                // sx
+                srcLeft,
+                // sy
+                srcTop,
+                // sw -- always take the full width of the container
+                containerWidth,
+                // sh
+                destH,
+                // dx
+                0,
+                // dy
+                0,
+                // dw (alt = destW)
+                containerWidth,
+                // dh
+                destH,
+            );
+            setImgData(buffer.toDataURL());
+            // setImgData(canvas!!.toDataURL());
         }
-    }, [containerWidth]);
+        go();
+
+        return () => {
+            cancel = true;
+            task?.cancel();
+        };
+    }, [containerWidth, vp.width]);
 
     return (
         <div className="relative">
             <canvas hidden={true} ref={sourceCanvasRef} width={srcW} height={srcH} />
-            <div
-                className={`shadow`}
-                style={{ width: destW, height: destH }}
-            >
-                <canvas
-                    ref={destCanvasRef}
-                    width={containerWidth}
-                    height={destH}
-                />
-            </div>
+            {imgData && <img src={imgData} className="h-auto shadow" alt="" />}
             <div className="inset-0 absolute w-0 h-0">
                 {rects ? <Highlight rects={rects} active={false} /> : null}
             </div>
@@ -138,7 +145,6 @@ export default function PreviewViewer(
 ) {
     const divRef = useRef<HTMLDivElement | null>(null);
     const { width, height } = useContainerDimensions(divRef);
-    console.log("PREVIEW GETTING PAGE AT: " + url);
     const doc = usePDFDoc(url);
     const [pageProxy, setPageProxy] = useState<PDFPageProxy | null>(null);
 

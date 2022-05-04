@@ -18,6 +18,7 @@ export const loader: LoaderFunction = async ({ request, params }) => {
 
     // 1. Check if the user is logged in
     const userData = await authenticator.isAuthenticated(request);
+
     if (userData?.meta.userExists) {
         // 2. Redirect the user to the page they were trying to access
         const redirectRoute = await session.get(SESSION_REDIRECT_KEY) || redirectTo;

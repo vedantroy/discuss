@@ -10,5 +10,9 @@ storage
 !storage/.gitkeep
 
 tsconfig.tsbuildinfo
+# hacky testing
+test-temp
 
 SECRETS.md
+test-results/
+playwright-report/

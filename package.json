@@ -54,6 +54,7 @@
     "zod-form-data": "^1.2.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.21.1",
     "@remix-run/dev": "^1.2.3",
     "@remix-run/eslint-config": "^1.2.3",
     "@types/flatbush": "^3.3.0",
