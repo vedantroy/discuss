@@ -19,7 +19,7 @@ export function getAuthStatus(
 
     const admin = policy.admins.some(id => id.shortId === userId);
     const writer = admin || policy.writers.some(id => id.shortId === userId);
-    if (!admin && !writer) return { type: ObjectStatusCode.NEED_INVITE };
+    if (!admin && !writer && !policy.public) return { type: ObjectStatusCode.NEED_INVITE };
     return {
         type: ObjectStatusCode.VALID,
         callerAccess: { admin, writer: writer },

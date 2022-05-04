@@ -27,7 +27,7 @@ export const loader: LoaderFunction = async ({ params, request }) => {
     if (doc.type === ObjectStatusCode.MISSING) {
         throw json({ error: { type: ObjectStatusCode.MISSING } }, 404);
     }
-    invariant(doc.type === ObjectStatusCode.VALID);
+    invariant(doc.type === ObjectStatusCode.VALID, `Invalid doc type: ${doc.type}`);
     return json(doc.payload);
 };
 
