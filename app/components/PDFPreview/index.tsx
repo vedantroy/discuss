@@ -1,8 +1,11 @@
+// TODO: Right now this component is debounced which is ugly
+// We want throttle ...  (or a fundamental bug fix)
 import type { PDFPageProxy, RenderTask } from "pdfjs-dist/types/src/display/api";
 import { useEffect, useRef, useState } from "react";
 import { Helmet } from "react-helmet";
 import invariant from "tiny-invariant";
 import { Link } from "~/mod";
+import debounceRender from "~/vendor/react-debounce-render";
 import Highlight from "../PDFWindow/PDFViewer/display/Highlight";
 import { Rect } from "../PDFWindow/types";
 import useContainerDimensions from "./useContainerDimensions";
@@ -34,7 +37,6 @@ function Page({ pageRects, page, containerWidth }: PageProps) {
     const sourceCanvasRef = useRef<HTMLCanvasElement | null>(null);
     // const destCanvasRef = useRef<HTMLCanvasElement | null>(null);
     const [imgData, setImgData] = useState<string | null>(null);
-
     const [rects, setRects] = useState<Rect[] | null>(null);
 
     const { outline, rects: highlightRects } = pageRects;
@@ -131,6 +133,8 @@ function Page({ pageRects, page, containerWidth }: PageProps) {
                 // dh
                 pDestH,
             );
+            // don't think this does anything??
+            if (cancel) return;
             setImgData(buffer.toDataURL());
             // setImgData(canvas!!.toDataURL());
         }
@@ -158,6 +162,8 @@ function Page({ pageRects, page, containerWidth }: PageProps) {
     );
 }
 
+const DebouncedPage = debounceRender(Page, 100);
+
 export default function PreviewViewer(
     { url, page, className, pageRects, clickUrl }: PreviewViewProps,
 ) {
@@ -182,7 +188,7 @@ export default function PreviewViewer(
                 ? (clickUrl
                     ? (
                         <Link prefetch="render" target="_blank" to={clickUrl}>
-                            <Page
+                            <DebouncedPage
                                 page={pageProxy}
                                 containerWidth={width}
                                 pageRects={pageRects}
@@ -190,7 +196,7 @@ export default function PreviewViewer(
                         </Link>
                     )
                     : (
-                        <Page
+                        <DebouncedPage
                             page={pageProxy}
                             containerWidth={width}
                             pageRects={pageRects}

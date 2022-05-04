@@ -2759,6 +2759,10 @@ html {
   width: auto;
 }
 
+.static {
+  position: static;
+}
+
 .absolute {
   position: absolute;
 }
