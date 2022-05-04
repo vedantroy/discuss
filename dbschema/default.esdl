@@ -55,6 +55,13 @@ module default {
 		multi link answers := .<user[is Answer];
 		multi link identities := .<user[is Identity];
 		multi link posts := .<user[is Post];
+
+		#property adminClubs := (
+		#	select Club filter Club.accessPolicy.admins.shortId = .shortId
+		#);
+		#property writerClubs := (
+		#	select Club filter Club.accessPolicy.writer.shortId = .shortId
+		#);
 	}
 
 	abstract type Identity {

@@ -42,3 +42,23 @@ export async function getClubsForUser(userId: ShortUserID): Promise<UserClubs> {
         writer: userIsWriter,
     } as UserClubs;
 }
+
+export type UserWithClub = {
+    displayName: string;
+    shortId: ShortUserID;
+    clubs: UserClubs;
+};
+
+// todo not efficient
+export async function getAllUsersWithClubs(): Promise<Array<UserWithClub>> {
+    const q = e.select(e.User, _ => ({ shortId: true, displayName: true }));
+    const users = await q.run(db);
+    const withClubs = await Promise.all(users.map(async u => {
+        const clubs = await getClubsForUser(u.shortId as ShortUserID);
+        return {
+            ...u,
+            clubs,
+        };
+    }));
+    return withClubs as Array<UserWithClub>;
+}
