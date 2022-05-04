@@ -3,7 +3,7 @@ import { Links, LiveReload, Meta, Outlet, Scripts, ScrollRestoration } from "~/m
 import styles from "./styles/app.css";
 
 export const meta: MetaFunction = () => {
-    return { title: "New Remix App" };
+    return { title: "Chimu" };
 };
 
 export function links() {
