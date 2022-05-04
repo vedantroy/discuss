@@ -17,15 +17,17 @@ import { getParam } from "~/route-utils/params";
 import { throwNotFoundResponse } from "~/route-utils/response";
 import { isLoggedIn } from "~/route-utils/session";
 import { authenticator } from "~/server/auth.server";
-import { ObjectStatusCode, ShortQuestionID } from "~/server/queries/common";
-import { createVote, removeVote } from "~/server/queries/q/common";
-import {
-    Answer,
-    getPDFQuestion,
-    MyVote,
-    Question,
-    submitAnswer,
-} from "~/server/queries/q/pdf";
+import { submitAnswer } from "~/server/db/queries/questions/answer";
+import { Answer, getPDFQuestion, MyVote, Question } from "~/server/db/queries/questions/pdf";
+import { createVote, removeVote } from "~/server/db/queries/votable";
+import { ObjectStatusCode, ShortQuestionID } from "~/server/model/types";
+// import {
+//    Answer,
+//    getPDFQuestion,
+//    MyVote,
+//    Question,
+//    submitAnswer,
+// } from "~/server/queries/q/pdf";
 import colors from "~/vendor/tailwindcss/colors";
 
 export function links() {
@@ -241,7 +243,7 @@ export default function() {
         score,
         content,
         page,
-        document: { url, shortId: docShortId },
+        document: { shortId: docShortId },
         rects,
         excerptRect,
         user: { image, shortId: userId, displayName },
@@ -250,8 +252,6 @@ export default function() {
     } = data;
 
     const createdDate = new Date(createdAt);
-
-    console.log(vote);
 
     return (
         <>
@@ -276,7 +276,7 @@ export default function() {
                             className="w-full"
                             pageRects={{ rects, outline: excerptRect }}
                             page={page}
-                            url={url}
+                            url={`/storage/pdf/${docShortId}`}
                         />
                         <div className="mt-2">{content}</div>
                         <div className="flex flex-row w-full mt-4">

@@ -7,16 +7,18 @@ import {
     SocialsProvider,
 } from "remix-auth-socials";
 import { createCookieSessionStorage } from "~/mod";
+import { ShortUserID } from "~/server/model/types";
 import getenv from "~/vendor/getenv.ts";
-import { getUserFromGoogleIdentity } from "./queries/auth";
-import { ShortUserID } from "./queries/common";
+import { getUserFromGoogleIdentity } from "./db/queries/auth";
+import { IS_PRODUCTION, IS_TEST } from "./env";
 
 const COOKIE_SECRET = getenv.string("COOKIE_SECRET");
 
 export const sessionStorage = createCookieSessionStorage({
     cookie: {
         name: "auth",
-        httpOnly: true,
+        // when testing, we want to be able to read/write the cookie in the browser
+        httpOnly: !IS_TEST,
         path: "/",
         sameSite: "lax",
         secrets: [COOKIE_SECRET], // This should be an env variable
@@ -69,12 +71,16 @@ export type UserSession = {
     };
 };
 
+const GoogleDevURL = `http://localhost:3000/auth/${SocialsProvider.GOOGLE}/callback`;
+const GoogleTestURL = `http://localhost:3000/auth/${SocialsProvider.GOOGLE}/callback`;
+const GoogleProdURL = `https://chimu.sh/auth/${SocialsProvider.GOOGLE}/callback`;
+
 export const authenticator = new Authenticator<UserSession>(sessionStorage);
 authenticator.use(
     new GoogleStrategy({
         clientID: GOOGLE_CLIENT_ID,
         clientSecret: GOOGLE_CLIENT_SECRET,
-        callbackURL: `http://localhost:3000/auth/${SocialsProvider.GOOGLE}/callback`,
+        callbackURL: IS_PRODUCTION ? GoogleProdURL : IS_TEST ? GoogleTestURL : GoogleDevURL,
     }, async (oauth) => {
         const user = await getUserFromGoogleIdentity(oauth.profile._json.sub);
         if (!user) {

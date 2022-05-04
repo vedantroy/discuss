@@ -4,11 +4,7 @@ import { SocialsProvider } from "remix-auth-socials";
 import invariant from "tiny-invariant";
 import { Form, json, LoaderFunction, redirect, useLoaderData } from "~/mod";
 import { getSession, setSessionHeader } from "~/route-utils/session";
-import {
-    authenticator,
-    SESSION_REDIRECT_KEY,
-    sessionStorage,
-} from "~/server/auth.server";
+import { authenticator, SESSION_REDIRECT_KEY, sessionStorage } from "~/server/auth.server";
 
 type LoaderData = {
     error: { message: string } | null;
@@ -22,6 +18,7 @@ export const loader: LoaderFunction = async ({ request, params }) => {
 
     // 1. Check if the user is logged in
     const userData = await authenticator.isAuthenticated(request);
+
     if (userData?.meta.userExists) {
         // 2. Redirect the user to the page they were trying to access
         const redirectRoute = await session.get(SESSION_REDIRECT_KEY) || redirectTo;
@@ -38,7 +35,7 @@ export const loader: LoaderFunction = async ({ request, params }) => {
             });
         } else {
             // No redirect was set, so redirect to base page
-            return redirect(`/`);
+            return redirect(`/dash`);
         }
     }
 

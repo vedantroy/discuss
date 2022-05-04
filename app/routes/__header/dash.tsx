@@ -6,7 +6,8 @@ import { LoaderFunction } from "~/mod";
 import { redirectToLogin } from "~/route-utils/response";
 import { isLoggedIn } from "~/route-utils/session";
 import { authenticator } from "~/server/auth.server";
-import { getClubsForUser, UserClubs } from "~/server/queries/dash";
+import { getClubsForUser, UserClubs } from "~/server/db/queries/user";
+import { ShortClubID } from "~/server/model/types";
 
 // priority: ship
 // meta lesson: if the site gets big I'm hiring a pro UI designer
@@ -32,7 +33,6 @@ export const loader: LoaderFunction = async ({ request, params }) => {
 const Header = (
     { children, className }: { children: React.ReactNode; className?: string },
 ) => (
-    // TODO: Use cslx
     <h2 className={clsx("text-3xl", className)}>
         {children}
     </h2>
@@ -57,10 +57,13 @@ const HeaderWithAction = (
     : <Header className={HEADER_POS}>{children}</Header>;
 
 const AddButton = ({ className }: { className?: string }) => (
-    <button className={clsx("btn btn-sm gap-2 btn-success", className)}>
+    <Link
+        to={`/c/create`}
+        className={clsx("btn btn-sm gap-2 btn-success", className)}
+    >
         <FaPlus />
         Create
-    </button>
+    </Link>
 );
 
 const JoinLink = ({ className }: { className?: string }) => (
@@ -70,10 +73,29 @@ const JoinLink = ({ className }: { className?: string }) => (
     </Link>
 );
 
+const ClubCard = (
+    { name, shortId, description }: {
+        name: string;
+        description: string;
+        shortId: ShortClubID;
+    },
+) => (
+    <Link to={`/c/${shortId}`}>
+        <div
+            className={`h-28 min-w-28 p-2 cursor-pointer rounded bg-gray-100 hover:bg-gray-200 transition-shadow duration-75 shadow shadow-gray-400 hover:shadow-md hover:shadow-gray-500`}
+        >
+            <h3 className="w-full text-center text-lg font-semibold mb-2">{name}</h3>
+            <div>
+                <p className="max-h-24 text-ellipses text-gray-800">{description}</p>
+            </div>
+        </div>
+    </Link>
+);
+
 export default function dash() {
-    const { clubs } = useLoaderData<LoaderData>();
-    const hasAdminClubs = clubs.admin.length > 0;
-    const hasJoinedClubs = clubs.writer.length > 0;
+    const { clubs: { admin, writer } } = useLoaderData<LoaderData>();
+    const hasAdminClubs = admin.length > 0;
+    const hasJoinedClubs = writer.length > 0;
     return (
         <div className="flex-1">
             <Col className="h-full w-full items-center">
@@ -83,7 +105,19 @@ export default function dash() {
                     My Clubs
                 </HeaderWithAction>
                 {hasAdminClubs
-                    ? <div>Your clubs</div>
+                    ? (
+                        // TODO: fix grid styling ...
+                        <div className="grid grid-cols-2 p-4 gap-4 w-full">
+                            {admin.map(c => (
+                                <ClubCard
+                                    key={c.shortId}
+                                    name={c.name}
+                                    description={c.description}
+                                    shortId={c.shortId}
+                                />
+                            ))}
+                        </div>
+                    )
                     : (
                         <div>
                             <span>You have no clubs!</span>

@@ -7,10 +7,7 @@ import invariant from "tiny-invariant";
 import { toURLSearchParams } from "~/api-transforms/submitContext";
 import { pdfjs } from "~/mod";
 import { useSearchParams } from "~/mod";
-import {
-    getDeepLinkHighlight,
-    getDeepLinkParams,
-} from "./PDFViewer/display/deepLink";
+import { getDeepLinkHighlight, getDeepLinkParams } from "./PDFViewer/display/deepLink";
 import { makeRects } from "./PDFViewer/display/selection";
 import Viewer, { MouseUpContext } from "./PDFViewer/display/ViewerInternal";
 import { PostHighlight } from "./types";
@@ -44,8 +41,7 @@ function getNumParam(
 }
 
 export default function(
-    { url: docSource, highlights, docId, width: pdfWidth, height: pdfHeight }:
-        PDFWindowProps,
+    { url: docSource, highlights, docId, width: pdfWidth, height: pdfHeight }: PDFWindowProps,
 ) {
     const [loaded, setLoaded] = useState(false);
     const docRef = useRef<PDFDocumentProxy | null>(null);
@@ -106,8 +102,7 @@ export default function(
                     const params = new URLSearchParams(
                         getDeepLinkParams(ctx, deeplinkOffset),
                     );
-                    const url =
-                        `${location.protocol}//${location.host}${location.pathname}`;
+                    const url = `${location.protocol}//${location.host}${location.pathname}`;
                     const urlWithParams = `${url}?${params.toString()}`;
                     if (copy(urlWithParams)) {
                         toast.success(`Link copied to clipboard!`);
@@ -151,8 +146,7 @@ export default function(
                         focusOffset: ctx.focusOffset,
                     }));
 
-                    const url =
-                        `${location.protocol}//${location.host}/submit/pdf/${docId}`;
+                    const url = `${location.protocol}//${location.host}/submit/pdf/${docId}`;
                     const urlWithParams = `${url}?${params.toString()}`;
                     window.open(urlWithParams, "_blank")!!.focus();
                 }

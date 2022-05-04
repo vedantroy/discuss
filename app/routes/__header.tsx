@@ -1,10 +1,11 @@
+import { useHydrated } from "remix-utils";
 import Denticon from "~/components/primitives/denticon";
 import { Col, Row } from "~/components/primitives/layout";
 import { json, Link, LoaderFunction, Outlet, useLoaderData } from "~/mod";
 import { isLoggedIn } from "~/route-utils/session";
 import { authenticator } from "~/server/auth.server";
-import { getUserPreview } from "~/server/queries/__header";
-import { UserPreview } from "~/server/queries/common";
+import { getUserPreview } from "~/server/db/queries/user";
+import { UserPreview } from "~/server/model/types";
 
 export const loader: LoaderFunction = async ({ request, params }) => {
     const userData = await authenticator.isAuthenticated(request);
@@ -19,7 +20,7 @@ export const loader: LoaderFunction = async ({ request, params }) => {
 // TODO: We should not use max-width on the header
 export default function() {
     const { user } = useLoaderData<{ user: UserPreview | null }>();
-    const url = typeof window !== "undefined" ? window.location.href : "";
+    const isHydrated = useHydrated();
     return (
         <Col className="h-screen">
             <Row className="w-full h-10 bg-gray-50 shadow shadow-gray-400 justify-center items-stretch z-50">
@@ -28,9 +29,11 @@ export default function() {
                         Chimu!
                     </div>
                     <div className="ml-auto mr-2">
-                        {!user && (
+                        {(!user && isHydrated) && (
                             <Link
-                                to={`/login?redirectTo=${encodeURIComponent(url)}`}
+                                to={`/login?redirectTo=${
+                                    encodeURIComponent(window.location.href)
+                                }`}
                                 className="btn btn-sm"
                             >
                                 Login

@@ -5,13 +5,13 @@ import PDF_CSS from "~/components/PDFWindow/PDFViewer/styles/page.css";
 import { json, LoaderFunction, useLoaderData, useParams } from "~/mod";
 import { getParam } from "~/route-utils/params";
 import { authenticator } from "~/server/auth.server";
+import { getPDFWithMetadata, PDFContext } from "~/server/db/queries/docs/pdf";
 import {
     DocumentPayload,
     ObjectStatusCode,
     ShortDocumentID,
     ShortUserID,
-} from "~/server/queries/common";
-import { getPDFAndClub, PDFContext } from "~/server/queries/d/pdf";
+} from "~/server/model/types";
 
 export function links() {
     return [{ rel: "stylesheet", href: PDF_CSS }];
@@ -20,14 +20,14 @@ export function links() {
 export const loader: LoaderFunction = async ({ params, request }) => {
     const docId = getParam(params, "docId");
     const userData = await authenticator.isAuthenticated(request);
-    const doc = await getPDFAndClub(
+    const doc = await getPDFWithMetadata(
         docId as ShortDocumentID,
         userData?.user?.shortId as ShortUserID,
     );
     if (doc.type === ObjectStatusCode.MISSING) {
         throw json({ error: { type: ObjectStatusCode.MISSING } }, 404);
     }
-    invariant(doc.type === ObjectStatusCode.VALID);
+    invariant(doc.type === ObjectStatusCode.VALID, `Invalid doc type: ${doc.type}`);
     return json(doc.payload);
 };
 
@@ -47,14 +47,14 @@ export default function Index() {
     }));
 
     console.log(data.docCtx);
-    const { url, width, height } = data.docCtx;
+    const { width, height } = data.docCtx;
     return (
         <Viewer
             width={width}
             height={height}
             docId={docId}
             highlights={highlights}
-            url={url}
+            url={`/storage/pdf/${docId}`}
         />
     );
 }

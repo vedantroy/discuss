@@ -79,6 +79,12 @@ function renderGraphics(
     invariant(canvas, `invalid canvas`);
     const ctx = canvas.getContext("2d");
     invariant(ctx, `invalid canvas context`);
+    // const ratio = window.devicePixelRatio;
+    // if (ratio > 1) {
+    //    // we're on a retina display
+    //    ctx.imageSmoothingEnabled = false;
+    //    ctx.scale(ratio, ratio);
+    // }
 
     const renderArgs: RenderParameters = {
         canvasContext: ctx,
@@ -225,8 +231,7 @@ function Page(
         setHighlightState({ flatbush, rects: allRects, idToRects });
     }, [textInfo?.html, highlights]);
 
-    const stateDescription =
-        `(internal=${internalState}, render=${state}, page=${pageNum})`;
+    const stateDescription = `(internal=${internalState}, render=${state}, page=${pageNum})`;
 
     useEffect(() => {
         let cancel = false;
@@ -417,7 +422,13 @@ function Page(
                 className="shadow relative"
                 style={{ ...styles, width, height }}
             >
-                <canvas ref={canvasRef} width={width} height={height} />
+                <canvas
+                    ref={canvasRef}
+                    width={width}
+                    height={height}
+                    // width={width * window.devicePixelRatio}
+                    // height={height * window.devicePixelRatio}
+                />
                 {textInfo
                     ? (
                         <div

@@ -1,0 +1,29 @@
+version: "3"
+services:
+  test-edgedb:
+    image: edgedb/edgedb
+    environment:
+      EDGEDB_SERVER_SECURITY: insecure_dev_mode
+    volumes:
+      - "./dbschema:/dbschema"
+      - "chimu-test-edgedb:/var/lib/edgedb/data"
+  test-server:
+    image: node:16-bullseye-slim
+    environment:
+      FS_ADAPTER_STORAGE_PATH: "/storage"
+      COOKIE_SECRET: "test-secret"
+      EDGEDB_HOST: "test-edgedb"
+      GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID}"
+      GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET}"
+    volumes:
+      - "chimu-test-storage:/storage"
+      - "./:/app"
+    working_dir: /app
+    command: bash -c "chmod ugo+rwx /storage && env NODE_ENV=test npm run dev"
+    ports:
+      - 127.0.0.1:3005:3000
+volumes:
+    chimu-test-edgedb:
+        external: false
+    chimu-test-storage:
+        external: false

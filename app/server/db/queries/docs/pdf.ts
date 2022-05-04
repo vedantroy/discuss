@@ -1,7 +1,78 @@
+import { PDFPost } from "dbschema/edgeql-js";
+import _ from "lodash";
 import { nanoid } from "nanoid";
+import invariant from "tiny-invariant";
 import { Rect } from "~/components/PDFWindow/types";
-import db, { e } from "~/server/edgedb.server";
-import { CommonPostProps, ShortDocumentID, ShortQuestionID } from "../common";
+import {
+    ClubResource,
+    CommonPostProps,
+    DocumentPayload,
+    ObjectStatusCode,
+    ShortDocumentID,
+    ShortQuestionID,
+    ShortUserID,
+} from "~/server/model/types";
+import db, { e } from "../../edgedb.server";
+import { getDocMetadataWithAuth } from "./common";
+
+// Gonna flex my type checking on you
+const pdfHighlightFields = [
+    "title",
+    "shortId",
+    "page",
+    "anchorIdx",
+    "focusIdx",
+    "anchorOffset",
+    "focusOffset",
+] as const;
+type PDFHighlightField = typeof pdfHighlightFields[number];
+export type PDFContext = {
+    width: number;
+    height: number;
+    highlights: Array<Pick<PDFPost, PDFHighlightField>>;
+};
+
+export async function getPDFWithMetadata(
+    docId: ShortDocumentID,
+    userId?: ShortUserID,
+): Promise<ClubResource<DocumentPayload<PDFContext>>> {
+    const am = await getDocMetadataWithAuth(docId, userId);
+    if (am === null) return { type: ObjectStatusCode.MISSING };
+    if (am.auth.type !== ObjectStatusCode.VALID) return am.auth;
+
+    const docCtxQuery = e.select(e.PDF, pdf => ({
+        baseWidth: true,
+        baseHeight: true,
+        posts: _.fromPairs(pdfHighlightFields.map(k => [k, true])) as Record<
+            PDFHighlightField,
+            true
+        >,
+        filter: e.op(pdf.shortId, "=", docId),
+        limit: 1,
+    }));
+
+    const docCtx = await docCtxQuery.run(db);
+    if (docCtx === null) {
+        // This could happen if the document was deleted since the last query
+        // But what's the realistic chance of that happening?
+        console.log(`Suspicious delete: ${am.meta.docName} under club: ${am.meta.clubName}`);
+        invariant(false, `If this happens & it's legit, just remove this invariant`);
+        return { type: ObjectStatusCode.MISSING };
+    }
+
+    return {
+        type: ObjectStatusCode.VALID,
+        callerAccess: am.auth.callerAccess,
+        payload: {
+            metadata: am.meta,
+            docCtx: {
+                width: docCtx.baseWidth,
+                height: docCtx.baseHeight,
+                highlights: docCtx.posts,
+            },
+        },
+    };
+}
 
 type PDFPostProps = {
     document: ShortDocumentID;
@@ -32,7 +103,7 @@ export async function createPDFPost(
             user => ({ limit: 1, filter: e.op(user.shortId, "=", props.userId) }),
         ),
         excerptRect: e.insert(e.PDFRect, props.excerptRect),
-        rects: e.set(...props.rects.map(r => e.insert(e.PDFRect, r))),
+        rects: e.set(...props.rects.map((r: Rect) => e.insert(e.PDFRect, r))),
         document: e.select(
             e.PDF,
             doc => ({ limit: 1, filter: e.op(doc.shortId, "=", props.document) }),

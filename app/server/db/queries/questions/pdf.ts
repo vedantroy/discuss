@@ -4,18 +4,17 @@ import {
     PDFRect as DBPDFRect,
     Vote as DBVote,
 } from "dbschema/edgeql-js";
-import db, { e } from "~/server/edgedb.server";
+import db, { e } from "~/server/db/edgedb.server";
+import { AccessPolicy, getAuthStatus } from "~/server/model/accessControl";
 import {
-    canAccessClub,
     ClubPreview,
     ClubResource,
     ObjectStatusCode,
-    ShortClubID,
     ShortQuestionID,
     ShortUserID,
-    userFromId,
     UserPreview,
-} from "../common";
+} from "~/server/model/types";
+import { accessControlSelector } from "../utils/selectors";
 
 export type PDFRect = Pick<DBPDFRect, "height" | "width" | "x" | "y">;
 export type MyVote = Pick<DBVote, "up">;
@@ -38,7 +37,7 @@ export type Question = {
     createdAt: string;
     answers: Array<Answer>;
     user: UserPreview;
-    document: Pick<PDF, "shortId" | "url"> & { club: ClubPreview };
+    document: Pick<PDF, "shortId"> & { club: ClubPreview };
 };
 export type QuestionStatus = ClubResource<Question>;
 
@@ -92,12 +91,10 @@ export async function getPDFQuestion(
         },
         filter: e.op(post.shortId, "=", id),
         document: {
-            url: true,
             shortId: true,
             club: {
                 name: true,
-                public: true,
-
+                accessPolicy: accessControlSelector,
                 shortId: true,
             },
         },
@@ -116,43 +113,30 @@ export async function getPDFQuestion(
     if (r === null) {
         return { type: ObjectStatusCode.MISSING };
     }
-    const shortId = r.document.club.shortId as ShortClubID;
-    const isPublic = r.document.club.public;
-    canAccessClub({ shortId, isPublic }, userId);
+    // const shortId = r.document.club.shortId as ShortClubID;
+    const auth = getAuthStatus(r.document.club.accessPolicy as AccessPolicy, userId);
+    if (auth.type !== ObjectStatusCode.VALID) return auth;
 
     const { votes, ...rest } = r;
 
+    // @ts-ignore - there is type branding here that I don't want to deal with
+    const casted = {
+        ...rest,
+        createdAt: r.createdAt.toISOString(),
+        shortId: r.shortId as ShortQuestionID,
+        // todo check this out
+        answers: r.answers.map(({ createdAt, votes, ...rest }) => ({
+            // shortId: rest.shortId as ShortUserID,
+            createdAt: createdAt.toISOString(),
+            vote: (votes || [])[0],
+            ...rest,
+        })) as Array<Answer>,
+        vote: (r.votes || [])[0],
+    } as Question;
+
     return {
         type: ObjectStatusCode.VALID,
-        payload: {
-            ...rest,
-            createdAt: r.createdAt.toISOString(),
-            shortId: r.shortId as ShortQuestionID,
-            answers: r.answers.map(({ createdAt, votes, ...rest }) => ({
-                createdAt: createdAt.toISOString(),
-                vote: (votes || [])[0],
-                ...rest,
-            })),
-            vote: (r.votes || [])[0],
-        },
+        callerAccess: auth.callerAccess,
+        payload: casted,
     };
-}
-
-type SubmitAnswer = {
-    userId: ShortUserID;
-    questionId: ShortQuestionID;
-    content: string;
-};
-
-export async function submitAnswer({ userId, questionId, content }: SubmitAnswer) {
-    const query = e.insert(e.Answer, {
-        user: userFromId(userId),
-        post: e.select(e.Post, post => ({
-            limit: 1,
-            filter: e.op(post.shortId, "=", questionId),
-        })),
-        content,
-        createdAt: e.datetime_of_transaction(),
-    });
-    await query.run(db);
 }

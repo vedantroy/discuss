@@ -1,8 +1,7 @@
 import * as edgedb from "edgedb";
-import { ConnectConfig } from "edgedb/dist/conUtils";
-import invariant from "tiny-invariant";
 import e from "~/../dbschema/edgeql-js";
 import getenv from "~/vendor/getenv.ts/index";
+import { IS_PRODUCTION } from "../env";
 
 let db: edgedb.Client;
 
@@ -10,13 +9,10 @@ declare global {
     var __db: edgedb.Client | undefined;
 }
 
-const production = process.env.NODE_ENV === "production";
-
-console.log(`MODE: ${process.env.NODE_ENV}`);
-if (production) {
+const EDGEDB_HOST = getenv.string("EDGEDB_HOST");
+if (IS_PRODUCTION) {
     const EDGEDB_PORT = getenv.int("EDGEDB_PORT");
     const EDGEDB_PASSWORD = getenv.string("EDGEDB_PASSWORD");
-    const EDGEDB_HOST = getenv.string("EDGEDB_HOST");
     const config: edgedb.ConnectOptions = {
         port: EDGEDB_PORT,
         password: EDGEDB_PASSWORD,
@@ -29,7 +25,11 @@ if (production) {
     db = edgedb.createClient(config);
 } else {
     if (!global.__db) {
-        global.__db = edgedb.createClient({ port: 5656, tlsSecurity: "insecure" });
+        global.__db = edgedb.createClient({
+            host: EDGEDB_HOST,
+            port: 5656,
+            tlsSecurity: "insecure",
+        });
     }
     db = global.__db;
 }

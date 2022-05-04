@@ -1,0 +1,24 @@
+diff --git a/node_modules/@remix-run/node/parseMultipartFormData.js b/node_modules/@remix-run/node/parseMultipartFormData.js
+index 135edba..07396cc 100644
+--- a/node_modules/@remix-run/node/parseMultipartFormData.js
++++ b/node_modules/@remix-run/node/parseMultipartFormData.js
+@@ -53,7 +53,9 @@ async function internalParseFormData(contentType, body, abortController, uploadH
+       function abort(error) {
+         if (aborted) return;
+         aborted = true;
+-        stream$1.unpipe();
++        if (stream$1.unpipe) {
++          stream$1.unpipe();
++        }
+         stream$1.removeAllListeners();
+         busboy.removeAllListeners();
+         abortController === null || abortController === void 0 ? void 0 : abortController.abort();
+@@ -83,8 +85,6 @@ async function internalParseFormData(contentType, body, abortController, uploadH
+               busboy.emit("error", error); // It's possible that the handler is doing stuff and fails
+               // *after* busboy has finished. Rethrow the error for surfacing
+               // in the Promise.all(fileWorkQueue) below.
+-
+-              throw error;
+             } finally {
+               filestream.resume();
+             }

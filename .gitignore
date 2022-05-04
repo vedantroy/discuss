@@ -1,11 +1,19 @@
 node_modules
 dbschema/edgeql-js
+e2e-tests/document_cookie
 
 /.cache
 /build
 /public/build
 .env
 
+storage
+!storage/.gitkeep
+
 tsconfig.tsbuildinfo
+# hacky testing
+test-temp
 
 SECRETS.md
+test-results/
+playwright-report/

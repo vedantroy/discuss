@@ -7,9 +7,23 @@ services:
     volumes:
       - "./dbschema:/dbschema"
       - "edgedb:/var/lib/edgedb/data"
-      - "storage:/storage"
     ports:
       - "127.0.0.1:5656:5656"
+  #server:
+  #  image: node:16-bullseye-slim
+  #  environment:
+  #    FS_ADAPTER_STORAGE_PATH: "/storage"
+  #    COOKIE_SECRET: "test-secret"
+  #    EDGEDB_HOST: "edgedb"
+  #    GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID}"
+  #    GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET}"
+  #  volumes:
+  #    - "storage:/storage"
+  #    - "./:/app"
+  #  working_dir: /app
+  #  command: npm run dev
+  #  ports:
+  #    - 3000:3000
 volumes:
     edgedb:
         external: false

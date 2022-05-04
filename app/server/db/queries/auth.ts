@@ -1,6 +1,7 @@
 import { nanoid } from "nanoid";
-import db, { e } from "~/server/edgedb.server";
-import { ShortUserID } from "./common";
+import { invariant } from "react-router/lib/router";
+import db, { e } from "~/server/db/edgedb.server";
+import { ShortUserID } from "~/server/model/types";
 
 export type CreateUser = {
     displayName: string;
@@ -45,4 +46,16 @@ export async function getUserFromGoogleIdentity(
     }));
     const r = await query.run(db);
     return r?.user ? { shortId: r.user.shortId as ShortUserID } : null;
+}
+
+export async function getUserEmail(
+    id: ShortUserID,
+): Promise<string | null> {
+    const q = e.select(e.User, user => ({
+        email: true,
+        filter: e.op(user.shortId, "=", id),
+    }));
+
+    const r = await q.run(db);
+    return r?.email || null;
 }
