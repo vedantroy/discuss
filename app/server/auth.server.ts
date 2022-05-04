@@ -72,7 +72,7 @@ export type UserSession = {
 };
 
 const GoogleDevURL = `http://localhost:3000/auth/${SocialsProvider.GOOGLE}/callback`;
-const GoogleTestURL = `http://localhost:3005/auth/${SocialsProvider.GOOGLE}/callback`;
+const GoogleTestURL = `http://localhost:3000/auth/${SocialsProvider.GOOGLE}/callback`;
 const GoogleProdURL = `https://chimu.sh/auth/${SocialsProvider.GOOGLE}/callback`;
 
 export const authenticator = new Authenticator<UserSession>(sessionStorage);

@@ -1,5 +1,6 @@
 import type { PDFPageProxy, RenderTask } from "pdfjs-dist/types/src/display/api";
 import { useEffect, useRef, useState } from "react";
+import { Helmet } from "react-helmet";
 import invariant from "tiny-invariant";
 import { Link } from "~/mod";
 import Highlight from "../PDFWindow/PDFViewer/display/Highlight";
@@ -53,7 +54,7 @@ function Page({ pageRects, page, containerWidth }: PageProps) {
     const { width: srcW, height: srcH } = vp;
 
     const firstRender = useRef(true);
-    const prevVpWidth = useRef({ w: srcW }).current;
+    const prevSrcW = useRef({ w: srcW }).current;
 
     // The position of the sample in the source canvas
     const srcTop = scale(top);
@@ -65,16 +66,22 @@ function Page({ pageRects, page, containerWidth }: PageProps) {
         if (!canvas) return;
         let cancel = false;
 
-        const renderSource = prevVpWidth.w !== vp.width || firstRender.current;
+        const renderSource = prevSrcW.w !== srcW || firstRender.current;
         firstRender.current = false;
-        console.log({ sourceSizeChanged: renderSource, prevW: prevVpWidth.w, curW: vp.width });
-        prevVpWidth.w = vp.width;
+        console.log({
+            sourceSizeChanged: renderSource,
+            prevW: prevSrcW.w,
+            curW: vp.width,
+        });
+        prevSrcW.w = srcW;
 
         let task: RenderTask | null = null;
         async function go() {
             if (cancel) return;
             if (renderSource) {
                 invariant(canvas, `invalid canvas`);
+                // canvas.width = srcW;
+                // canvas.height = srcH;
                 const srcCtx = canvas.getContext("2d");
                 invariant(srcCtx, `invalid canvas context`);
                 invariant(canvas, `invalid canvas`);
@@ -99,6 +106,17 @@ function Page({ pageRects, page, containerWidth }: PageProps) {
             invariant(bufferCtx, `invalid canvas context`);
             buffer.width = containerWidth;
             buffer.height = destH;
+
+            const subsectW = containerWidth;
+            const subsectH = destH;
+
+            const pDestW = containerWidth;
+            const pDestH = destH;
+
+            // console.log(
+            //    `v2 src: ${srcW}x${srcH} subsect: ${subsectW}x${subsectH}, dest: ${pDestW}x${pDestH}`,
+            // );
+
             bufferCtx.drawImage(
                 canvas!!,
                 // sx
@@ -106,17 +124,17 @@ function Page({ pageRects, page, containerWidth }: PageProps) {
                 // sy
                 srcTop,
                 // sw -- always take the full width of the container
-                containerWidth,
+                subsectW,
                 // sh
-                destH,
+                subsectH,
                 // dx
                 0,
                 // dy
                 0,
                 // dw (alt = destW)
-                containerWidth,
+                pDestW,
                 // dh
-                destH,
+                pDestH,
             );
             setImgData(buffer.toDataURL());
             // setImgData(canvas!!.toDataURL());
@@ -127,10 +145,15 @@ function Page({ pageRects, page, containerWidth }: PageProps) {
             cancel = true;
             task?.cancel();
         };
-    }, [containerWidth, vp.width]);
+    }, [containerWidth, srcW]);
 
     return (
         <div className="relative">
+            <Helmet>
+                {/* drawImage is not great on Safari -https://stackoverflow.com/questions/35500999/cropping-with-drawimage-not-working-in-safari */}
+                {/* https://gist.github.com/Kaiido/ca9c837382d89b9d0061e96181d1d862 */}
+                <script src="/polyfill/safari_canvas_min.js"></script>
+            </Helmet>
             <canvas hidden={true} ref={sourceCanvasRef} width={srcW} height={srcH} />
             {imgData && <img src={imgData} className="h-auto shadow" alt="" />}
             <div className="inset-0 absolute w-0 h-0">

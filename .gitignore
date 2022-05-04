@@ -1,5 +1,6 @@
 node_modules
 dbschema/edgeql-js
+e2e-tests/document_cookie
 
 /.cache
 /build
