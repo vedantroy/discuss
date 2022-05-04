@@ -10,7 +10,7 @@ FROM base as deps
 RUN mkdir /app
 WORKDIR /app
 
-ADD package.json package-lock.json ./
+ADD package.json package-lock.json patches ./
 RUN npm install --production=false
 
 # Setup production node_modules
@@ -20,7 +20,7 @@ RUN mkdir /app
 WORKDIR /app
 
 COPY --from=deps /app/node_modules /app/node_modules
-ADD package.json package-lock.json ./
+ADD package.json package-lock.json patches ./
 RUN npm prune --production
 
 # Build the app
