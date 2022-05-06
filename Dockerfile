@@ -10,6 +10,8 @@ FROM base as deps
 RUN mkdir /app
 WORKDIR /app
 
+ENV METRONOME_API_KEY=$METRONOME_API_KEY
+
 ADD package.json package-lock.json patches ./
 RUN npm install --production=false
 
@@ -27,6 +29,7 @@ RUN npm prune --production
 FROM base as build
 
 ENV NODE_ENV=production
+ENV METRONOME_API_KEY=$METRONOME_API_KEY
 
 RUN mkdir /app
 WORKDIR /app
@@ -34,7 +37,8 @@ WORKDIR /app
 COPY --from=deps /app/node_modules /app/node_modules
 
 ADD . .
-RUN npm run build
+
+RUN npm run build:prod
 
 # Finally, build the production image with minimal footprint
 FROM base

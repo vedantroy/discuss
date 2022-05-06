@@ -48,7 +48,8 @@ export default function() {
                         </Row>
                         <a href="https://discord.gg/ns4FeJnYNm">
                             <Row className="items-center">
-                            <span className="mr-2 text-white">Discord</span> <SiDiscord color="white" size={25} />
+                                <span className="mr-2 text-white">Discord</span>{" "}
+                                <SiDiscord color="white" size={25} />
                             </Row>
                         </a>
                     </Row>

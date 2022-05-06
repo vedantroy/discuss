@@ -19,6 +19,7 @@ type PDFWindowProps = {
     height: number;
     highlights: PostHighlight[];
     docId: string;
+    title: string;
 };
 
 type ToastIds = {
@@ -41,7 +42,8 @@ function getNumParam(
 }
 
 export default function(
-    { url: docSource, highlights, docId, width: pdfWidth, height: pdfHeight }: PDFWindowProps,
+    { url: docSource, highlights, docId, width: pdfWidth, height: pdfHeight, title }:
+        PDFWindowProps,
 ) {
     const [loaded, setLoaded] = useState(false);
     const docRef = useRef<PDFDocumentProxy | null>(null);
@@ -58,6 +60,15 @@ export default function(
     //    delete newParams.pageOffset;
     //    setSearchParams(newParams);
     // };
+
+    const showHelp = useCallback(() => {
+        toast(
+            <span>
+                Highlight text and press <b>p</b> to create a post or <b>l</b>{" "}
+                to create a deep link. Posting requires being logged in.
+            </span>,
+        );
+    }, []);
 
     useEffect(() => {
         async function go() {
@@ -158,12 +169,13 @@ export default function(
 
     const pageToHighlights = _.groupBy(highlights, h => h.page);
     const deepLinkHighlight = getDeepLinkHighlight(params);
-    console.log(deepLinkHighlight);
 
     return (
         <div>
             <Toaster reverseOrder={true} position="bottom-right" />
             <Viewer
+                title={title}
+                showHelp={showHelp}
                 baseWidth={pdfWidth}
                 baseHeight={pdfHeight}
                 // clearSearchParams={removeParams}

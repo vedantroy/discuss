@@ -37,15 +37,17 @@ export async function insertUserWithGoogleIdentity(
 // Get the Google OAuth data if it exists
 export async function getUserFromGoogleIdentity(
     sub: string,
-): Promise<{ shortId: ShortUserID } | null> {
+): Promise<{ shortId: ShortUserID; email: string; displayName: string } | null> {
     const query = e.select(e.GoogleIdentity, google => ({
         user: {
             shortId: true,
+            email: true,
+            displayName: true,
         },
         filter: e.op(google.sub, "=", sub),
     }));
     const r = await query.run(db);
-    return r?.user ? { shortId: r.user.shortId as ShortUserID } : null;
+    return r?.user ? { ...r?.user, shortId: r.user.shortId as ShortUserID } : null;
 }
 
 export async function getUserEmail(
