@@ -25,7 +25,7 @@ const INPUT_NAME = "Name";
 const INPUT_DESCRIPTION = "Description";
 const INPUT_FILES = "Files";
 
-const MAX_FILE_SIZE_BYTES = DataUnit.MEGABYTE.toBytes(5);
+const MAX_FILE_SIZE_BYTES = DataUnit.MEGABYTE.toBytes(10);
 const MAX_FILE_SIZE_MB = DataUnit.BYTE.toMegabytes(MAX_FILE_SIZE_BYTES);
 const isPDF = (x: File) => x.type === "application/pdf";
 
