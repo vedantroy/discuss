@@ -45,7 +45,7 @@ export default function(
             className="grid px-2 justify-between shadow shadow-zinc-700 bg-zinc-600 min-h-8 items-center text-zinc-200 text-base"
             style={{ zIndex: 2, gridTemplateColumns: "1fr auto 1fr" }}
         >
-            <div className="font-semibold">{title}</div>
+            <div className="font-semibold truncate pr-8">{title}</div>
             <Row className="basis-0">
                 <input
                     ref={pageInputRef}
