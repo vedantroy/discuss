@@ -67,9 +67,8 @@ export default function() {
                         >
                             Get Started
                         </Link>
-                        <button className="btn" onClick={() => alert("Coming soon!")}>
-                            View Example
-                        </button>
+                        <a className="btn" href="https://chimu.sh/d/pdf/wWELr-jIorg4Tz6WZk_vX"> View Example
+                        </a>
                     </Row>
                 </Col>
             </Col>
