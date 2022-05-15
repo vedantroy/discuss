@@ -3,7 +3,6 @@ import { Rect } from "../../types";
 type HighlightProps = {
     rects: Rect[];
     active: boolean;
-    cursor?: boolean;
 };
 
 const highlight: React.FC<HighlightProps> = ({ rects, active }) => {
@@ -13,7 +12,7 @@ const highlight: React.FC<HighlightProps> = ({ rects, active }) => {
                 <div
                     // don't want the order to change ..
                     key={i}
-                    className={`absolute bg-black z-10 ${
+                    className={`absolute bg-sky-500 z-10 ${
                         active ? `opacity-50` : `opacity-10`
                     }`}
                     style={{ top: y, left: x, width, height }}
