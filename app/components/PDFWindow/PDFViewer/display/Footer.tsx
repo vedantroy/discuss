@@ -12,7 +12,7 @@ type CardProps = {
 const Card = ({ hotKey = null, text, active }: CardProps) => {
     return (
         <div
-            className={`card overflow-visible card-compact h-28 w-28 bg-zinc-200 cursor-pointer transition-shadow duration-75 shadow shadow-zinc-400 hover:shadow-md hover:shadow-zinc-500 ${
+            className={`card overflow-visible card-compact h-28 w-28 bg-white cursor-pointer transition-shadow duration-75 shadow shadow-zinc-400 hover:shadow-md hover:shadow-zinc-500 ${
                 active ? `shadow-md shadow-zinc-500` : ""
             }`}
         >
