@@ -11,6 +11,7 @@ import { clamp, fill, range } from "lodash";
 import invariant from "tiny-invariant";
 import { fromId, getPageTextId } from "~/api-transforms/spanId";
 import { PostHighlight, Rect } from "../../types";
+import Header from "./header";
 import { makeRects, processSelection, SelectionContext } from "./selection";
 
 pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
@@ -18,8 +19,6 @@ pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
 // TODO: replace this params
 const PAGE_BUFFER_SIZE = 5;
 const MAX_SCALE_FACTOR = 4;
-
-const NAV_KEYS = new Set(["ArrowLeft", "ArrowRight", "Delete", "Backspace"]);
 
 // This can't be a prop b/c
 // we would need to call a method on the page manager to
@@ -51,9 +50,10 @@ type ViewerProps = {
     pageToHighlights: Record<number, PostHighlight[]>;
     baseWidth: number;
     baseHeight: number;
+    title: string;
 
     onSelection: (ctx: MouseUpContext | null) => void;
-    // clearSearchParams: () => void;
+    showHelp: () => void;
 };
 
 const StartupState = {
@@ -75,9 +75,11 @@ function Viewer(
         pageToHighlights,
         firstPageOffset,
         baseHeight,
+        showHelp,
         firstPage,
         linkedHighlightIds, /* clearSearchParams */
         deepLinkHighlight,
+        title,
     }: ViewerProps,
 ) {
     const forceUpdate: () => void = useState()[1].bind(null, {} as any);
@@ -94,7 +96,7 @@ function Viewer(
     );
 
     const pageInputRef = useRef<HTMLInputElement>(null);
-    const zoomRef = useRef<number>(1.0);
+    const [zoom, setZoom] = useState(1.0);
 
     const queuedScrollYRef = useRef<number | null>(null);
     const { current: pageToPromise } = useRef<Record<number, Promise<number>>>({});
@@ -194,9 +196,7 @@ function Viewer(
             const promises = Object.values(pageToPromise);
             const firstPageLoadedNum = await Promise.race(promises);
             const firstPageLoaded = pages[firstPageLoadedNum - 1];
-            const viewport = firstPageLoaded!!.proxy.getViewport({
-                scale: zoomRef.current!!,
-            });
+            const viewport = firstPageLoaded!!.proxy.getViewport({ scale: zoom });
             setViewport(viewport);
 
             const pm = new PageManager({
@@ -258,8 +258,6 @@ function Viewer(
         [pageStates, viewport, outstandingRender],
     );
 
-    const maxDigits = doc.numPages.toString().length;
-
     const goToPageFromInput = useCallback(() => {
         const text = pageInputRef.current?.value || "";
         const i = parseInt(text === "" ? "1" : text);
@@ -305,47 +303,18 @@ function Viewer(
                 style={{ height }}
                 className="flex flex-col overflow-hidden bg-zinc-400"
             >
-                <div
-                    // TODO: Why do we have to use min-height?
-                    className="flex flex-row shadow shadow-zinc-700 bg-zinc-600 min-h-8 items-center text-zinc-200 text-base"
-                    style={{ zIndex: 2 }}
-                >
-                    <input
-                        ref={pageInputRef}
-                        onKeyDown={evt => {
-                            if (evt.ctrlKey || NAV_KEYS.has(evt.key)) return;
-                            if (evt.key === "Enter") {
-                                goToPageFromInput();
-                                return;
-                            }
-                            // only allow numbers
-                            if (!isFinite(parseInt(evt.key)) || evt.key === " ") {
-                                evt.preventDefault();
-                            }
-                        }}
-                        onBlur={() => goToPageFromInput()}
-                        className="border-none outline-none bg-zinc-700 mr-1 ml-2 text-center"
-                        style={{ width: `calc(max(2, ${maxDigits}) * 1ch + 8px)` }}
-                    >
-                    </input>
-                    <div>/ {doc.numPages}</div>
-                    <button
-                        onClick={() => {
-                            zoomRef.current -= 0.1;
-                            pm.setZoom(zoomRef.current);
-                        }}
-                    >
-                        - zoom
-                    </button>
-                    <button
-                        onClick={() => {
-                            zoomRef.current += 0.1;
-                            pm.setZoom(zoomRef.current);
-                        }}
-                    >
-                        + zoom
-                    </button>
-                </div>
+                <Header
+                    title={title}
+                    showHelp={showHelp}
+                    pageInputRef={pageInputRef}
+                    zoom={zoom}
+                    goToPage={goToPageFromInput}
+                    pages={doc.numPages}
+                    onZoom={zoom => {
+                        setZoom(zoom);
+                        pm.setZoom(zoom);
+                    }}
+                />
                 <div
                     ref={pageContainerRef}
                     onScroll={e => {

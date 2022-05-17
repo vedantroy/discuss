@@ -3059,6 +3059,10 @@ html {
   width: 100vw;
 }
 
+.w-\[6ch\] {
+  width: 6ch;
+}
+
 .w-\[200px\] {
   width: 200px;
 }
@@ -3083,6 +3087,10 @@ html {
 
 .flex-1 {
   flex: 1 1 0%;
+}
+
+.basis-0 {
+  flex-basis: 0px;
 }
 
 .transform {
@@ -3127,6 +3135,10 @@ html {
 
 .justify-start {
   justify-content: flex-start;
+}
+
+.justify-end {
+  justify-content: flex-end;
 }
 
 .justify-center {
@@ -3175,6 +3187,11 @@ html {
   row-gap: 1rem;
 }
 
+.gap-x-1 {
+  -moz-column-gap: 0.25rem;
+       column-gap: 0.25rem;
+}
+
 .self-start {
   align-self: flex-start;
 }
@@ -3193,6 +3210,12 @@ html {
 
 .overflow-x-auto {
   overflow-x: auto;
+}
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .text-ellipsis {
@@ -3307,14 +3330,19 @@ html {
   background-color: rgb(161 161 170 / var(--tw-bg-opacity));
 }
 
+.bg-zinc-700 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(63 63 70 / var(--tw-bg-opacity));
+}
+
 .bg-zinc-600 {
   --tw-bg-opacity: 1;
   background-color: rgb(82 82 91 / var(--tw-bg-opacity));
 }
 
-.bg-zinc-700 {
+.bg-emerald-400 {
   --tw-bg-opacity: 1;
-  background-color: rgb(63 63 70 / var(--tw-bg-opacity));
+  background-color: rgb(52 211 153 / var(--tw-bg-opacity));
 }
 
 .bg-sky-100 {
@@ -3380,6 +3408,10 @@ html {
 
 .pt-1 {
   padding-top: 0.25rem;
+}
+
+.pr-8 {
+  padding-right: 2rem;
 }
 
 .text-center {

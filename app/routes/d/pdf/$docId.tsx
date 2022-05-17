@@ -46,10 +46,10 @@ export default function Index() {
         ...rest,
     }));
 
-    console.log(data.docCtx);
     const { width, height } = data.docCtx;
     return (
         <Viewer
+            title={data.metadata.docName}
             width={width}
             height={height}
             docId={docId}

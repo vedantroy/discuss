@@ -47,7 +47,10 @@ export default function() {
                             <FaBookReader /> <span className="ml-4">Chimu</span>
                         </Row>
                         <a href="https://discord.gg/ns4FeJnYNm">
-                            <SiDiscord color="white" size={25} />
+                            <Row className="items-center">
+                                <span className="mr-2 text-white">Discord</span>{" "}
+                                <SiDiscord color="white" size={25} />
+                            </Row>
                         </a>
                     </Row>
                     <h2 className="text-white w-full text-5xl font-semibold mb-8">
@@ -64,9 +67,8 @@ export default function() {
                         >
                             Get Started
                         </Link>
-                        <button className="btn" onClick={() => alert("Coming soon!")}>
-                            View Example
-                        </button>
+                        <a className="btn" href="https://chimu.sh/d/pdf/wWELr-jIorg4Tz6WZk_vX"> View Example
+                        </a>
                     </Row>
                 </Col>
             </Col>

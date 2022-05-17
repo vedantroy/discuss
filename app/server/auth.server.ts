@@ -68,6 +68,8 @@ export type UserSession = {
     };
     user?: {
         shortId: ShortUserID;
+        email: string;
+        displayName: string;
     };
 };
 
