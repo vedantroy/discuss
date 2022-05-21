@@ -1,7 +1,6 @@
 import { Link } from "@remix-run/react";
 import { FaBookReader } from "react-icons/fa";
-import { SiDiscord } from "react-icons/si";
-import { Col, Row } from "~/components/primitives/layout";
+import { SiDiscord } from "react-icons/si"; import { Col, Row } from "~/components/primitives/layout";
 import type { LinksFunction } from "~/mod";
 // import { json, LoaderFunction } from "~/mod";
 // import { isLoggedIn } from "~/route-utils/session";
@@ -67,7 +66,7 @@ export default function() {
                         >
                             Get Started
                         </Link>
-                        <a className="btn" href="https://chimu.sh/d/pdf/wWELr-jIorg4Tz6WZk_vX"> View Example
+                        <a className="btn" href="https://chimu.sh/d/pdf/RVy_2UTemDx0J9dcYuiEi"> View Example
                         </a>
                     </Row>
                 </Col>
