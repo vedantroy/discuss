@@ -1,5 +1,4 @@
 import { nanoid } from "nanoid";
-import { invariant } from "react-router/lib/router";
 import db, { e } from "~/server/db/edgedb.server";
 import { ShortUserID } from "~/server/model/types";
 

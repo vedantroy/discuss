@@ -256,7 +256,7 @@ export default function() {
     return (
         <>
             <Toaster position="bottom-right" />
-            <div className="Container-Width my-0">
+            <div className="Container-Width px-4 my-0">
                 <div className="flex flex-col">
                     <h1 className="text-3xl break-words mt-6">{title}</h1>
                     <div className="flex flex-row">
